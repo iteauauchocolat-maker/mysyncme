@@ -640,13 +640,14 @@ body.bg-cage .timestamp {
 }
 .fukidashi {
   position: relative;
-  background: var(--char-accent);
-  color: #fff;
+  background: var(--char-bubble);
+  color: var(--char-bubble-text);
   border: none;
-  border-radius: 14px;
+  border-radius: 20px;
   padding: 10px 8px 12px;
-  font-family: inherit;
-  font-size: 12px;
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
   line-height: 1.4;
   text-align: center;
   cursor: pointer;
@@ -655,7 +656,7 @@ body.bg-cage .timestamp {
   align-items: center;
   justify-content: center;
   transition: opacity 0.1s, transform 0.1s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 0 3px #fff, 0 4px 12px rgba(0, 0, 0, 0.10);
   word-break: break-word;
 }
 .fukidashi::after {
@@ -666,9 +667,10 @@ body.bg-cage .timestamp {
   width: 0; height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid var(--char-accent);
+  border-top: 8px solid var(--char-bubble);
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.08));
 }
-.fukidashi:active { opacity: 0.8; transform: scale(0.97); }
+.fukidashi:active { opacity: 0.85; transform: scale(0.97); }
 .fukidashi-text {
   display: -webkit-box;
   -webkit-line-clamp: 6;
@@ -698,34 +700,36 @@ body.bg-cage .timestamp {
 .main-character-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .main-talk-btn {
   position: relative;
-  background: var(--char-accent);
-  color: #fff;
+  background: var(--char-bubble);
+  color: var(--char-bubble-text);
   border: none;
-  border-radius: 14px;
+  border-radius: 22px;
   padding: 16px 14px;
-  font-family: inherit;
-  font-size: 17px;
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.35;
+  letter-spacing: 0.04em;
   text-align: center;
   cursor: pointer;
   min-height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  box-shadow: inset 0 0 0 3px #fff, 0 4px 12px rgba(0, 0, 0, 0.12);
   transition: opacity 0.1s, transform 0.1s;
 }
 .main-talk-btn::before {
   content: '';
   position: absolute;
-  left: -10px;
+  left: -9px;
   top: 50%;
   transform: translateY(-50%);
   width: 0; height: 0;
   border-top: 10px solid transparent;
   border-bottom: 10px solid transparent;
-  border-right: 10px solid var(--char-accent);
+  border-right: 10px solid var(--char-bubble);
+  filter: drop-shadow(-2px 0 1px rgba(0, 0, 0, 0.08));
 }
 .main-talk-btn:active { opacity: 0.9; transform: scale(0.99); }
 
@@ -771,11 +775,25 @@ body.bg-cage .timestamp {
   padding: 10px 6px;
 }
 .main-tile-label {
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
   font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.main-tile-label.small { font-size: 13px; font-weight: 700; }
+.main-tile-label.small {
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: center;
+}
+.main-tile-label .label-icon {
+  font-size: 18px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.08));
+}
+.main-tile-label.small .label-icon { font-size: 14px; }
 .main-tile-body {
   font-size: 12px;
   line-height: 1.45;
@@ -1194,9 +1212,9 @@ body.bg-cage .timestamp {
       </div>
 
       <div class="main-fukidashi-row">
-        <button class="fukidashi" data-fuki="0" type="button"><span class="fukidashi-text">取得中…</span></button>
-        <button class="fukidashi" data-fuki="1" type="button"><span class="fukidashi-text">取得中…</span></button>
-        <button class="fukidashi" data-fuki="2" type="button"><span class="fukidashi-text">取得中…</span></button>
+        <button class="fukidashi" data-fuki="0" type="button"><span class="fukidashi-text">考え中…</span></button>
+        <button class="fukidashi" data-fuki="1" type="button"><span class="fukidashi-text">考え中…</span></button>
+        <button class="fukidashi" data-fuki="2" type="button"><span class="fukidashi-text">考え中…</span></button>
       </div>
 
       <div class="main-character-row">
@@ -1208,26 +1226,26 @@ body.bg-cage .timestamp {
 
       <div class="main-grid-major">
         <button class="main-tile schedule-tile" id="btnMainSchedule" type="button">
-          <div class="main-tile-label">スケジュール</div>
+          <div class="main-tile-label"><span class="label-icon">📅</span>スケジュール</div>
           <div class="main-tile-body" id="mainScheduleBody"></div>
         </button>
         <button class="main-tile train-tile" id="btnMainTrain" type="button">
-          <div class="main-tile-label">鉄道</div>
+          <div class="main-tile-label"><span class="label-icon">🚃</span>鉄道</div>
           <div class="main-tile-body" id="mainTrainBody">取得中…</div>
         </button>
       </div>
 
       <div class="main-grid-mixed">
         <button class="main-tile todo-tile" id="btnMainTodo" type="button">
-          <div class="main-tile-label">TODO</div>
+          <div class="main-tile-label"><span class="label-icon">📝</span>TODO</div>
           <div class="main-tile-body" id="mainTodoBody"></div>
         </button>
         <button class="main-tile small weather-tile" id="btnMainWeather" type="button">
-          <div class="main-tile-label small">天気</div>
+          <div class="main-tile-label small"><span class="label-icon">☁️</span>天気</div>
           <div class="main-tile-icon-big" id="mainWeatherBody">…</div>
         </button>
         <button class="main-tile small fortune-tile" id="btnMainFortune" type="button">
-          <div class="main-tile-label small">占い</div>
+          <div class="main-tile-label small"><span class="label-icon">🔮</span>占い</div>
           <div class="main-tile-icon-big" id="mainFortuneIcon">…</div>
           <div class="main-tile-stars-bottom" id="mainFortuneStars"></div>
         </button>
@@ -2833,13 +2851,13 @@ function renderFukidashiTiles() {
   const items = (cache && cache.items) || [];
   els.forEach((el, idx) => {
     if (mainLoadingFlags.fukidashi && (!items[idx] || !items[idx].text)) {
-      el.textContent = '取得中…';
+      el.textContent = '考え中…';
     } else if (items[idx] && items[idx].text) {
       el.textContent = items[idx].text;
     } else if (!settings.apiKey) {
       el.textContent = 'APIキーを設定してね';
     } else {
-      el.textContent = '取得中…';
+      el.textContent = '考え中…';
     }
   });
 }
