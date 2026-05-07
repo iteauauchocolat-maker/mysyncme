@@ -1430,6 +1430,12 @@ body.bg-cage .timestamp {
       <div id="profileCategories"></div>
 
       <div class="section">
+        <h3>テキストで出力</h3>
+        <div class="hint" style="margin-bottom:10px;">プロフィール全体をテキスト形式でクリップボードにコピーします。コピーしたテキストを「自由記述メモ」に貼り付けて「AI に整理してもらう」を押すと、元の項目に戻せます。</div>
+        <button class="btn" id="btnExportProfile">📋 テキストでコピー</button>
+      </div>
+
+      <div class="section">
         <button class="btn btn-secondary" id="btnResetProfile">プロフィールをすべて削除</button>
       </div>
 
@@ -4317,6 +4323,70 @@ document.getElementById('inputProfileImage').addEventListener('change', e => {
 });
 
 document.getElementById('btnProfileGeoUpload').addEventListener('click', readProfileFromGeolocation);
+
+function buildProfileExportText() {
+  const lines = [];
+  const basics = [];
+  if (profile.name) basics.push('呼び方: ' + profile.name);
+  if (profile.birthday) basics.push('誕生日: ' + profile.birthday);
+  if (profile.address) basics.push('住所: ' + profile.address);
+  if (basics.length > 0) {
+    lines.push('【基本情報】');
+    basics.forEach(b => lines.push('・' + b));
+    lines.push('');
+  }
+  if (Array.isArray(profile.routes) && profile.routes.length > 0) {
+    lines.push('【通勤・通学路線】');
+    profile.routes.forEach(r => lines.push('・' + r));
+    lines.push('');
+  }
+  PROFILE_CATEGORIES.forEach(cat => {
+    const items = profileItems(cat.id);
+    if (items.length === 0) return;
+    lines.push('【' + cat.name + '】');
+    items.forEach(it => {
+      const text = (typeof it === 'string') ? it : (it && it.text ? it.text : '');
+      if (text) lines.push('・' + text);
+    });
+    lines.push('');
+  });
+  if (profile.freeText && profile.freeText.trim()) {
+    lines.push('【自由記述メモ】');
+    lines.push(profile.freeText.trim());
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}
+
+async function exportProfileAsText() {
+  const text = buildProfileExportText();
+  if (!text) {
+    showToast('プロフィールはまだ空です', 'error');
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('execCommand failed');
+    }
+    showToast('クリップボードにコピーしたよ', 'success');
+  } catch (e) {
+    console.error('copy failed', e);
+    showToast('コピーに失敗しました', 'error');
+  }
+}
+
+document.getElementById('btnExportProfile').addEventListener('click', exportProfileAsText);
 
 document.getElementById('btnResetProfile').addEventListener('click', () => {
   if (!confirm('プロフィール(基本情報・自由記述・全カテゴリの項目・路線)をすべて削除しますか?')) return;
