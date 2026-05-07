@@ -1160,8 +1160,26 @@ body.on-main .main-grid-apps { display: grid; }
   line-height: 1;
 }
 .main-tile-precip:empty { display: none; }
+.main-tile-temp {
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.main-tile-temp:empty { display: none; }
+.main-tile-temp .high { color: #E8704A; }
+.main-tile-temp .low { color: #4A90D9; }
+.main-tile-temp .sep { color: var(--text-sub); font-weight: 500; opacity: 0.6; }
 @media (prefers-color-scheme: dark) {
   .main-tile-precip { color: #7FB3E0; }
+  .main-tile-temp .high { color: #F08866; }
+  .main-tile-temp .low { color: #7FB3E0; }
 }
 
 .schedule-tile { border-color: #6CB7E8; }
@@ -1594,6 +1612,7 @@ body.on-main .main-grid-apps { display: grid; }
         <button class="main-tile small weather-tile" id="btnMainWeather" type="button">
           <div class="main-tile-label small"><span class="label-icon">☁️</span>天気</div>
           <div class="main-tile-icon-big" id="mainWeatherBody">…</div>
+          <div class="main-tile-temp" id="mainWeatherTemp"></div>
           <div class="main-tile-precip" id="mainWeatherPrecip"></div>
         </button>
         <button class="main-tile small fortune-tile" id="btnMainFortune" type="button">
@@ -3667,6 +3686,8 @@ async function loadWeather(force) {
       '{\n' +
       '  "icon": "晴/曇/雨/雪/雷 のいずれか1つ",\n' +
       '  "precip": "今日の降水確率(% 表記、例: 30%)",\n' +
+      '  "highTemp": "今日の最高気温(整数のみ、単位なし、例: 28)",\n' +
+      '  "lowTemp": "今日の最低気温(整数のみ、単位なし、例: 18)",\n' +
       '  "summary": "今日の天気を一言(20文字以内)",\n' +
       '  "detail": "今日と明日の天気・気温・降水確率・服装アドバイスを数行"\n' +
       '}\n' +
@@ -3677,6 +3698,8 @@ async function loadWeather(force) {
       address: profile.address,
       icon: String(obj.icon || ''),
       precip: String(obj.precip || ''),
+      highTemp: String(obj.highTemp || '').replace(/[^\-\d]/g, ''),
+      lowTemp: String(obj.lowTemp || '').replace(/[^\-\d]/g, ''),
       summary: String(obj.summary || ''),
       detail: String(obj.detail || ''),
       sources: sources
@@ -4166,23 +4189,36 @@ function renderTodoTile() {
 function renderWeatherTile() {
   const v = document.getElementById('mainWeatherBody');
   const p = document.getElementById('mainWeatherPrecip');
+  const t = document.getElementById('mainWeatherTemp');
   if (!v) return;
   const setPrecip = (txt) => { if (p) p.textContent = txt || ''; };
-  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = '13px'; setPrecip(''); return; }
-  if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; setPrecip(''); return; }
+  const setTemp = (high, low) => {
+    if (!t) return;
+    if (!high && !low) { t.textContent = ''; return; }
+    const parts = [];
+    if (high) parts.push('<span class="high">' + escapeHtml(high) + '°</span>');
+    if (high && low) parts.push('<span class="sep">/</span>');
+    if (low) parts.push('<span class="low">' + escapeHtml(low) + '°</span>');
+    t.innerHTML = parts.join('');
+  };
+  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = '13px'; setPrecip(''); setTemp('', ''); return; }
+  if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; setPrecip(''); setTemp('', ''); return; }
   const cache = readMainCache('weather');
   if (cache && !cache.error && cache.icon) {
     v.style.fontSize = '';
     v.textContent = weatherEmoji(cache.icon);
     setPrecip(cache.precip ? '💧 ' + cache.precip : '');
+    setTemp(cache.highTemp || '', cache.lowTemp || '');
   } else if (cache && cache.error) {
     v.style.fontSize = '13px';
     v.textContent = '取得失敗';
     setPrecip('');
+    setTemp('', '');
   } else {
     v.style.fontSize = '';
     v.textContent = '…';
     setPrecip('');
+    setTemp('', '');
   }
 }
 
