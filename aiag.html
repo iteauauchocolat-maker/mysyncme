@@ -66,7 +66,10 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: url('images/cage_bg.jpg') center bottom / cover no-repeat;
+  background-image: var(--bg-image, url('images/cage_bg.jpg'));
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
   z-index: -2;
   pointer-events: none;
   opacity: 0;
@@ -589,6 +592,22 @@ body.bg-cage .timestamp {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.add-char-bg-preview {
+  width: 96px;
+  height: 64px;
+  border-radius: 10px;
+  background: var(--card-solid);
+  border: 2px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-sub);
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
 }
 .char-counter {
   font-size: 11px;
@@ -1854,6 +1873,15 @@ body.bg-cage .timestamp {
       <div class="hint">正方形に近い画像がおすすめ。512px までに自動縮小されます。</div>
     </div>
     <div class="field">
+      <label>背景画像(任意)</label>
+      <input type="file" id="inputAddCharBackground" accept="image/*" style="display:none;">
+      <div class="add-char-image-row">
+        <div class="add-char-bg-preview" id="addCharBgPreview">背景なし</div>
+        <button class="btn btn-secondary" id="btnAddCharBgPick" type="button">🖼 背景を選ぶ</button>
+      </div>
+      <div class="hint">このキャラを選んだとき、画面の背景になります。未指定なら標準のケージ背景。1024px までに自動縮小されます。</div>
+    </div>
+    <div class="field">
       <label>名前 <span class="char-counter" id="addCharNameCounter">0/20</span></label>
       <input type="text" id="inputAddCharName" maxlength="20" placeholder="例: もも、ぐーた、せんせい">
     </div>
@@ -2048,6 +2076,7 @@ const CHARACTERS = [
       munch: 'images/miru_munch.png'
     },
     fallbackEmoji: '🐹',
+    backgroundImage: 'images/cage_bg.jpg',
     systemPrompt:
       'あなたは「ミル」という名前の白いテディモルモットのAIアシスタントです。\n\n' +
       '【性格】\n' +
@@ -2092,6 +2121,7 @@ const CHARACTERS = [
       smile: 'images/pui_smile.png'
     },
     fallbackEmoji: '🐹',
+    backgroundImage: 'images/cage_bg.jpg',
     systemPrompt:
       'あなたは「プイ」という名前の茶色いメリノモルモットのAIアシスタントです。\n\n' +
       '【性格】\n' +
@@ -2177,6 +2207,7 @@ function saveCustomChars() {
       name: c.name,
       profile: c.profile,
       imageDataUrl: c.imageDataUrl,
+      backgroundDataUrl: c.backgroundDataUrl || '',
       createdAt: c.createdAt
     }));
     localStorage.setItem(STORAGE_KEYS.customChars, JSON.stringify(minimal));
@@ -2188,6 +2219,7 @@ function saveCustomChars() {
 function materializeCustomChar(stored) {
   if (!stored || !stored.id || !stored.name) return null;
   const img = stored.imageDataUrl || '';
+  const bg = stored.backgroundDataUrl || '';
   return {
     id: stored.id,
     name: stored.name,
@@ -2196,6 +2228,8 @@ function materializeCustomChar(stored) {
     description: stored.profile || '',
     profile: stored.profile || '',
     imageDataUrl: img,
+    backgroundDataUrl: bg,
+    backgroundImage: bg || 'images/cage_bg.jpg',
     isCustom: true,
     createdAt: stored.createdAt || '',
     theme: {
@@ -2443,6 +2477,8 @@ function applyCharTheme(char) {
     root.style.setProperty('--char-ai-bubble-text', t.aiBubbleText);
   }
   root.style.setProperty('--char-accent', t.accent);
+  const bg = char.backgroundImage || 'images/cage_bg.jpg';
+  root.style.setProperty('--bg-image', 'url("' + bg.replace(/"/g, '\\"') + '")');
 }
 
 function setCharExpression(expr) {
@@ -3105,13 +3141,18 @@ function closeCharSelectModal() {
 }
 
 let pendingAddCharImage = '';
+let pendingAddCharBackground = '';
 function openAddCharModal() {
   pendingAddCharImage = '';
+  pendingAddCharBackground = '';
   document.getElementById('inputAddCharName').value = '';
   document.getElementById('inputAddCharProfile').value = '';
   updateAddCharCounters();
   const prev = document.getElementById('addCharImagePreview');
   prev.innerHTML = '画像なし';
+  const bgPrev = document.getElementById('addCharBgPreview');
+  bgPrev.textContent = '背景なし';
+  bgPrev.style.backgroundImage = '';
   document.getElementById('addCharModal').classList.add('show');
   setTimeout(() => document.getElementById('inputAddCharName').focus(), 100);
 }
@@ -3172,6 +3213,28 @@ async function pickAddCharImage(file) {
   }
 }
 
+async function pickAddCharBackground(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type)) {
+    showToast('画像ファイルを選んでください', 'error');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('画像が大きすぎます (10MB まで)', 'error');
+    return;
+  }
+  try {
+    const resized = await resizeImageDataUrl(file, 1024);
+    pendingAddCharBackground = resized;
+    const prev = document.getElementById('addCharBgPreview');
+    prev.textContent = '';
+    prev.style.backgroundImage = 'url("' + resized.replace(/"/g, '\\"') + '")';
+  } catch (e) {
+    console.error(e);
+    showToast('画像の読み込みに失敗しました', 'error');
+  }
+}
+
 function submitAddChar() {
   const name = document.getElementById('inputAddCharName').value.trim();
   const profile = document.getElementById('inputAddCharProfile').value.trim();
@@ -3186,6 +3249,7 @@ function submitAddChar() {
     name: name,
     profile: profile,
     imageDataUrl: pendingAddCharImage || '',
+    backgroundDataUrl: pendingAddCharBackground || '',
     createdAt: new Date().toISOString()
   };
   const char = materializeCustomChar(stored);
@@ -3284,6 +3348,14 @@ document.getElementById('inputAddCharImage').addEventListener('change', async e 
   const f = e.target.files && e.target.files[0];
   e.target.value = '';
   if (f) await pickAddCharImage(f);
+});
+document.getElementById('btnAddCharBgPick').addEventListener('click', () => {
+  document.getElementById('inputAddCharBackground').click();
+});
+document.getElementById('inputAddCharBackground').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (f) await pickAddCharBackground(f);
 });
 document.getElementById('inputAddCharName').addEventListener('input', updateAddCharCounters);
 document.getElementById('inputAddCharProfile').addEventListener('input', updateAddCharCounters);
