@@ -638,26 +638,39 @@ body.bg-cage .timestamp {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 6px;
+  gap: 3px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   color: var(--text);
   transition: background 0.15s;
   user-select: none;
+  overflow: hidden;
 }
 .cal-day.other { color: var(--text-sub); opacity: 0.35; cursor: default; }
 .cal-day.today { font-weight: 700; color: var(--char-accent); }
 .cal-day.selected { background: var(--char-accent); color: #fff; }
 .cal-day.selected.today { color: #fff; }
 .cal-day:not(.selected):not(.other):active { background: var(--border); }
-.cal-day-dot {
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: var(--char-accent);
-  margin-top: 2px;
+.cal-day-event {
+  font-size: 9px;
+  line-height: 1.2;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--char-bubble);
+  color: var(--char-bubble-text);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
-.cal-day.selected .cal-day-dot { background: #fff; }
+.cal-day.selected .cal-day-event {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
 .event-list-head {
   display: flex;
   align-items: center;
@@ -2435,7 +2448,14 @@ function renderCalendar() {
   const today = todayStr();
   const monthPrefix = calViewYear + '-' + pad2(calViewMonth);
   const monthEvents = schedule.events.filter(e => e.date && e.date.startsWith(monthPrefix));
-  const eventDates = new Set(monthEvents.map(e => e.date));
+  const firstEventByDate = {};
+  monthEvents.forEach(e => {
+    const cur = firstEventByDate[e.date];
+    if (!cur) { firstEventByDate[e.date] = e; return; }
+    const a = (cur.time || '99:99');
+    const b = (e.time || '99:99');
+    if (b < a) firstEventByDate[e.date] = e;
+  });
   for (let i = 0; i < startWd; i++) {
     const el = document.createElement('div');
     el.className = 'cal-day other';
@@ -2450,10 +2470,13 @@ function renderCalendar() {
     const num = document.createElement('span');
     num.textContent = d;
     el.appendChild(num);
-    if (eventDates.has(dateStr)) {
-      const dot = document.createElement('div');
-      dot.className = 'cal-day-dot';
-      el.appendChild(dot);
+    const firstEv = firstEventByDate[dateStr];
+    if (firstEv) {
+      const label = document.createElement('div');
+      label.className = 'cal-day-event';
+      const title = (firstEv.title || '予定').trim();
+      label.textContent = title.length > 4 ? title.slice(0, 4) : title;
+      el.appendChild(label);
     }
     el.addEventListener('click', () => {
       selectedDateStr = dateStr;
