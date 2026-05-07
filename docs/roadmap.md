@@ -22,6 +22,22 @@
 - [x] キャラごとのテーマカラー(背景・吹き出し色)
 - [x] キャラ画像タップで拡大表示
 
+### Phase 4: スケジュール機能(C+D 案) ✅
+- [x] 月表示カレンダー(7 列グリッド、今日強調、選択日ハイライト、予定ありドット)
+- [x] 月切替ボタン
+- [x] 選択日の予定リスト表示
+- [x] 予定の手動追加・編集・削除モーダル(タイトル/日付/開始終了時刻/メモ)
+- [x] AI による自然言語からの予定追加(`addScheduleByText`)
+- [x] 画像アップロードからの予定抽出(`addScheduleByImage`)— スクショ・手帳の写真など
+- [x] 予定一括削除
+
+**実装メモ:**
+- LocalStorage キー: `agent_schedule`
+- データ構造: `{ events: [{ id, title, date(YYYY-MM-DD), time, endTime, memo, createdAt, source }] }`
+- AI 抽出時は `responseMimeType: application/json` で JSON 強制
+- 画像は profile と同じく 1280px JPEG q0.85 に圧縮してから送信
+- Google カレンダー連携は意図的に未実装(decisions.md 参照、将来の B 案で対応予定)
+
 ### Phase 3: ユーザープロフィール画面 ✅
 - [x] 呼び方入力(`profile.name`)とシステムプロンプトへの注入
 - [x] 自由記述メモ入力欄(`profile.freeText`)

@@ -599,6 +599,97 @@ body.bg-cage .timestamp {
   border-radius: 50%;
 }
 .profile-content { padding: 16px 16px calc(60px + 16px + env(safe-area-inset-bottom)); }
+.schedule-content { padding: 16px 16px calc(60px + 16px + env(safe-area-inset-bottom)); }
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cal-nav-btn {
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  color: var(--text);
+  padding: 6px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cal-nav-btn:active { background: var(--border); }
+.cal-nav-title { font-size: 16px; font-weight: 600; }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-head {
+  font-size: 11px;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 4px 0;
+}
+.cal-head.sun { color: #E5575E; }
+.cal-head.sat { color: #5A8FE0; }
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.15s;
+  user-select: none;
+}
+.cal-day.other { color: var(--text-sub); opacity: 0.35; cursor: default; }
+.cal-day.today { font-weight: 700; color: var(--char-accent); }
+.cal-day.selected { background: var(--char-accent); color: #fff; }
+.cal-day.selected.today { color: #fff; }
+.cal-day:not(.selected):not(.other):active { background: var(--border); }
+.cal-day-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--char-accent);
+  margin-top: 2px;
+}
+.cal-day.selected .cal-day-dot { background: #fff; }
+.event-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.event-list-head h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--text); text-transform: none; letter-spacing: 0; }
+.event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+.event-item:first-child { border-top: none; }
+.event-time {
+  font-size: 13px;
+  color: var(--char-accent);
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 56px;
+  padding-top: 1px;
+}
+.event-time.allday { color: var(--text-sub); font-weight: 500; }
+.event-body { flex: 1; min-width: 0; }
+.event-title { font-size: 15px; color: var(--text); line-height: 1.4; word-wrap: break-word; }
+.event-memo { font-size: 13px; color: var(--text-sub); margin-top: 3px; word-wrap: break-word; }
+.event-empty {
+  text-align: center;
+  color: var(--text-sub);
+  padding: 18px 0;
+  font-size: 13px;
+}
 .profile-cat-head {
   display: flex;
   align-items: center;
@@ -755,9 +846,46 @@ body.bg-cage .timestamp {
 
   <div id="screen-schedule" class="screen">
     <div class="header"><div class="header-title">スケジュール</div></div>
-    <div class="placeholder">
-      <h2>準備中</h2>
-      <p>後のステップで実装予定です。</p>
+    <div class="schedule-content">
+
+      <div class="section">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" id="btnCalPrev" aria-label="前の月">‹</button>
+          <span class="cal-nav-title" id="calTitle"></span>
+          <button class="cal-nav-btn" id="btnCalNext" aria-label="次の月">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <div class="section">
+        <div class="event-list-head">
+          <h3 id="eventListHead"></h3>
+          <button class="profile-cat-add" id="btnAddEvent">+ 追加</button>
+        </div>
+        <div id="eventList"></div>
+      </div>
+
+      <div class="section">
+        <h3>AI で予定を追加</h3>
+        <div class="field">
+          <label>自然な言葉で書く</label>
+          <textarea id="inputScheduleText" rows="2" placeholder="例: 明日14時に歯医者、5月15日にサッカーの試合"></textarea>
+          <div class="hint">AI が解釈して予定を追加します。</div>
+        </div>
+        <button class="btn" id="btnAddScheduleByText">AI に追加してもらう</button>
+      </div>
+
+      <div class="section">
+        <h3>画像から取り込む</h3>
+        <div class="hint" style="margin-bottom:10px;">スクショや手帳の写真をアップすると、AI が予定を読み取って追加します。画像は Google に送信されます(保存はされません)。</div>
+        <input type="file" id="inputScheduleImage" accept="image/*" style="display:none;">
+        <button class="btn" id="btnScheduleImageUpload">📷 画像を選んで追加</button>
+      </div>
+
+      <div class="section">
+        <button class="btn btn-secondary" id="btnResetSchedule">予定をすべて削除</button>
+      </div>
+
     </div>
   </div>
 
@@ -825,6 +953,37 @@ body.bg-cage .timestamp {
     <h3>キャラクター選択</h3>
     <div id="charCardList"></div>
     <button class="btn btn-secondary" id="btnCloseCharSelect" style="margin-top:8px;">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="eventModal">
+  <div class="modal">
+    <h3 id="eventModalTitle">予定を追加</h3>
+    <div class="field">
+      <label>タイトル</label>
+      <input type="text" id="inputEventTitle" placeholder="例: 歯医者">
+    </div>
+    <div class="field">
+      <label>日付</label>
+      <input type="date" id="inputEventDate">
+    </div>
+    <div class="field">
+      <label>時間(任意)</label>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="time" id="inputEventTime" style="flex:1;">
+        <span style="color:var(--text-sub);">〜</span>
+        <input type="time" id="inputEventEndTime" style="flex:1;">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ(任意)</label>
+      <textarea id="inputEventMemo" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnDeleteEvent" style="display:none;">削除</button>
+      <button class="btn btn-secondary" id="btnCancelEvent">キャンセル</button>
+      <button class="btn" id="btnSaveEvent">保存</button>
+    </div>
   </div>
 </div>
 
@@ -964,7 +1123,8 @@ const STORAGE_KEYS = {
   settings: 'agent_settings',
   activeChar: 'agent_active_char',
   chatPrefix: 'agent_chat_',
-  profile: 'agent_profile'
+  profile: 'agent_profile',
+  schedule: 'agent_schedule'
 };
 const DEFAULT_SETTINGS = { apiKey: '', model: 'gemini-2.5-flash' };
 
@@ -988,11 +1148,16 @@ const DEFAULT_PROFILE = {
 
 let settings = loadSettings();
 let profile = loadProfile();
+let schedule = loadSchedule();
 let activeCharId = localStorage.getItem(STORAGE_KEYS.activeChar) || CHARACTERS[0].id;
 let chatHistory = loadChatHistory(activeCharId);
 let isWaitingResponse = false;
 let isOrganizingProfile = false;
+let isProcessingSchedule = false;
 let editingProfileItem = null;
+let editingEventId = null;
+let calViewYear, calViewMonth;
+let selectedDateStr = '';
 
 function getActiveChar() {
   return CHARACTERS.find(c => c.id === activeCharId) || CHARACTERS[0];
@@ -1055,6 +1220,56 @@ function setProfileItems(catId, arr) {
 }
 function hasAnyProfileDetail() {
   return PROFILE_CATEGORIES.some(c => profileItems(c.id).length > 0);
+}
+
+function loadSchedule() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.schedule);
+    if (!raw) return { events: [] };
+    const s = JSON.parse(raw);
+    return { events: Array.isArray(s.events) ? s.events : [] };
+  } catch (e) {
+    return { events: [] };
+  }
+}
+function saveSchedule() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.schedule, JSON.stringify(schedule));
+  } catch (e) {
+    console.error('スケジュール保存失敗', e);
+    showToast('保存に失敗しました', 'error');
+  }
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+function genId() {
+  return 'ev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+function eventsByDate(dateStr) {
+  return schedule.events
+    .filter(e => e.date === dateStr)
+    .sort((a, b) => (a.time || 'zz').localeCompare(b.time || 'zz'));
+}
+function formatDateLabel(dateStr) {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const wd = ['日','月','火','水','木','金','土'];
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日(' + wd[d.getDay()] + ')';
+}
+function normalizeTime(s) {
+  if (!s || typeof s !== 'string') return '';
+  const m = s.match(/^(\d{1,2}):?(\d{2})?$/);
+  if (!m) return '';
+  const h = parseInt(m[1]); const min = m[2] ? parseInt(m[2]) : 0;
+  if (h < 0 || h > 23 || min < 0 || min > 59) return '';
+  return pad2(h) + ':' + pad2(min);
+}
+function isValidDateStr(s) {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
 function showToast(message, type = '') {
@@ -2008,6 +2223,342 @@ async function readProfileFromImage(file, mode) {
   }
 }
 
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const heads = ['日','月','火','水','木','金','土'];
+  heads.forEach((h, i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-head' + (i === 0 ? ' sun' : (i === 6 ? ' sat' : ''));
+    el.textContent = h;
+    grid.appendChild(el);
+  });
+  const first = new Date(calViewYear, calViewMonth - 1, 1);
+  const last = new Date(calViewYear, calViewMonth, 0);
+  const startWd = first.getDay();
+  const days = last.getDate();
+  const today = todayStr();
+  const monthPrefix = calViewYear + '-' + pad2(calViewMonth);
+  const monthEvents = schedule.events.filter(e => e.date && e.date.startsWith(monthPrefix));
+  const eventDates = new Set(monthEvents.map(e => e.date));
+  for (let i = 0; i < startWd; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day other';
+    grid.appendChild(el);
+  }
+  for (let d = 1; d <= days; d++) {
+    const dateStr = monthPrefix + '-' + pad2(d);
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    if (dateStr === today) el.classList.add('today');
+    if (dateStr === selectedDateStr) el.classList.add('selected');
+    const num = document.createElement('span');
+    num.textContent = d;
+    el.appendChild(num);
+    if (eventDates.has(dateStr)) {
+      const dot = document.createElement('div');
+      dot.className = 'cal-day-dot';
+      el.appendChild(dot);
+    }
+    el.addEventListener('click', () => {
+      selectedDateStr = dateStr;
+      renderCalendar();
+      renderEventList();
+    });
+    grid.appendChild(el);
+  }
+  document.getElementById('calTitle').textContent = calViewYear + '年 ' + calViewMonth + '月';
+}
+
+function renderEventList() {
+  const list = document.getElementById('eventList');
+  if (!list) return;
+  list.innerHTML = '';
+  document.getElementById('eventListHead').textContent = formatDateLabel(selectedDateStr) + 'の予定';
+  const evs = eventsByDate(selectedDateStr);
+  if (evs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'event-empty';
+    empty.textContent = '予定はありません';
+    list.appendChild(empty);
+    return;
+  }
+  evs.forEach(ev => {
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    const t = document.createElement('div');
+    t.className = 'event-time';
+    if (ev.time) {
+      t.textContent = ev.endTime ? (ev.time + '〜' + ev.endTime) : ev.time;
+    } else {
+      t.textContent = '終日';
+      t.classList.add('allday');
+    }
+    const body = document.createElement('div');
+    body.className = 'event-body';
+    const title = document.createElement('div');
+    title.className = 'event-title';
+    title.textContent = ev.title || '(無題)';
+    body.appendChild(title);
+    if (ev.memo) {
+      const memo = document.createElement('div');
+      memo.className = 'event-memo';
+      memo.textContent = ev.memo;
+      body.appendChild(memo);
+    }
+    item.appendChild(t);
+    item.appendChild(body);
+    item.addEventListener('click', () => openEventModal(ev.id));
+    list.appendChild(item);
+  });
+}
+
+function renderScheduleScreen() {
+  if (!calViewYear || !calViewMonth) {
+    const d = new Date();
+    calViewYear = d.getFullYear();
+    calViewMonth = d.getMonth() + 1;
+  }
+  if (!selectedDateStr) selectedDateStr = todayStr();
+  renderCalendar();
+  renderEventList();
+}
+
+function openEventModal(id) {
+  editingEventId = id || null;
+  const ev = id ? schedule.events.find(e => e.id === id) : null;
+  document.getElementById('eventModalTitle').textContent = ev ? '予定を編集' : '予定を追加';
+  document.getElementById('inputEventTitle').value = ev ? (ev.title || '') : '';
+  document.getElementById('inputEventDate').value = ev ? ev.date : selectedDateStr;
+  document.getElementById('inputEventTime').value = ev ? (ev.time || '') : '';
+  document.getElementById('inputEventEndTime').value = ev ? (ev.endTime || '') : '';
+  document.getElementById('inputEventMemo').value = ev ? (ev.memo || '') : '';
+  document.getElementById('btnDeleteEvent').style.display = ev ? '' : 'none';
+  document.getElementById('eventModal').classList.add('show');
+  setTimeout(() => document.getElementById('inputEventTitle').focus(), 100);
+}
+function closeEventModal() {
+  document.getElementById('eventModal').classList.remove('show');
+  editingEventId = null;
+}
+function saveEventFromModal() {
+  const title = document.getElementById('inputEventTitle').value.trim();
+  const date = document.getElementById('inputEventDate').value;
+  const time = document.getElementById('inputEventTime').value;
+  const endTime = document.getElementById('inputEventEndTime').value;
+  const memo = document.getElementById('inputEventMemo').value.trim();
+  if (!title) { showToast('タイトルを入れてね', 'error'); return; }
+  if (!isValidDateStr(date)) { showToast('日付を選んでね', 'error'); return; }
+  if (editingEventId) {
+    const idx = schedule.events.findIndex(e => e.id === editingEventId);
+    if (idx >= 0) {
+      schedule.events[idx] = {
+        ...schedule.events[idx],
+        title, date,
+        time: time || '',
+        endTime: endTime || '',
+        memo
+      };
+    }
+  } else {
+    schedule.events.push({
+      id: genId(),
+      title, date,
+      time: time || '',
+      endTime: endTime || '',
+      memo,
+      createdAt: new Date().toISOString(),
+      source: 'manual'
+    });
+  }
+  saveSchedule();
+  selectedDateStr = date;
+  const p = date.split('-');
+  calViewYear = parseInt(p[0]);
+  calViewMonth = parseInt(p[1]);
+  renderCalendar();
+  renderEventList();
+  closeEventModal();
+  showToast('保存しました', 'success');
+}
+function deleteEventFromModal() {
+  if (!editingEventId) return;
+  if (!confirm('この予定を削除しますか?')) return;
+  schedule.events = schedule.events.filter(e => e.id !== editingEventId);
+  saveSchedule();
+  renderCalendar();
+  renderEventList();
+  closeEventModal();
+  showToast('削除しました', 'success');
+}
+
+function buildScheduleSysPrompt(mode) {
+  const today = new Date();
+  const wd = ['日','月','火','水','木','金','土'][today.getDay()];
+  const todayStr2 = todayStr();
+  const modeBlock = mode === 'image'
+    ? '入力された画像から予定情報(日時・タイトルなど)を読み取ってください。スクショ・手帳・カレンダー・チラシなどを想定しています。'
+    : '入力されたテキストから予定情報を読み取ってください。「明日」「来週月曜」など今日の日付を基準に解釈してください。';
+  return 'あなたは予定を抽出するアシスタントです。\n' +
+    '今日の日付: ' + todayStr2 + ' (' + wd + '曜日)\n\n' +
+    modeBlock + '\n\n' +
+    '【出力スキーマ】\n' +
+    '{ "events": [ { "title": string, "date": "YYYY-MM-DD", "time": "HH:MM"または空, "endTime": "HH:MM"または空, "memo": string } ] }\n\n' +
+    '【ルール】\n' +
+    '- 出力は JSON オブジェクトのみ。説明文・コードブロック禁止。\n' +
+    '- 日付は YYYY-MM-DD 形式の文字列。\n' +
+    '- 時刻が分からない場合は time を空文字に。\n' +
+    '- 1 つの入力から複数の予定が読み取れる場合は events に複数入れる。\n' +
+    '- 予定が読み取れない場合は events を空配列にする。\n' +
+    '- 推測で勝手に予定を作らない。';
+}
+
+function applyExtractedEvents(events) {
+  let added = 0;
+  events.forEach(ev => {
+    if (!ev || typeof ev !== 'object') return;
+    const title = typeof ev.title === 'string' ? ev.title.trim() : '';
+    const date = typeof ev.date === 'string' ? ev.date.trim() : '';
+    if (!title || !isValidDateStr(date)) return;
+    schedule.events.push({
+      id: genId(),
+      title,
+      date,
+      time: normalizeTime(ev.time || ''),
+      endTime: normalizeTime(ev.endTime || ''),
+      memo: typeof ev.memo === 'string' ? ev.memo.trim() : '',
+      createdAt: new Date().toISOString(),
+      source: 'ai'
+    });
+    added++;
+  });
+  if (added > 0) saveSchedule();
+  return added;
+}
+
+async function callScheduleExtraction(parts, sys) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + encodeURIComponent(settings.model)
+    + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json'
+    },
+    systemInstruction: { parts: [{ text: sys }] }
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+    try {
+      const errData = await resp.json();
+      if (errData.error && errData.error.message) errMsg = errData.error.message;
+    } catch {}
+    throw new Error(errMsg);
+  }
+  const data = await resp.json();
+  const candidate = data.candidates && data.candidates[0];
+  if (!candidate) throw new Error('AIから応答がありませんでした');
+  if (candidate.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
+  const ps = candidate.content && candidate.content.parts;
+  const raw = ps ? ps.map(p => p.text || '').join('').trim() : '';
+  if (!raw) throw new Error('応答が空でした');
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (e) { throw new Error('AI の返答を JSON として解釈できませんでした'); }
+  return Array.isArray(parsed.events) ? parsed.events : [];
+}
+
+async function addScheduleByText() {
+  if (isProcessingSchedule) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  const text = document.getElementById('inputScheduleText').value.trim();
+  if (!text) { showToast('内容を入れてね', 'error'); return; }
+  const btn = document.getElementById('btnAddScheduleByText');
+  const orig = btn.textContent;
+  isProcessingSchedule = true;
+  btn.disabled = true;
+  btn.textContent = '解釈中...';
+  try {
+    const sys = buildScheduleSysPrompt('text');
+    const events = await callScheduleExtraction([{ text }], sys);
+    const added = applyExtractedEvents(events);
+    if (added > 0) {
+      document.getElementById('inputScheduleText').value = '';
+      renderCalendar();
+      renderEventList();
+      showToast(added + ' 件追加したよ', 'success');
+    } else {
+      showToast('予定として読み取れませんでした', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast(String(e.message || e), 'error');
+  } finally {
+    isProcessingSchedule = false;
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function addScheduleByImage(file) {
+  if (isProcessingSchedule) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  if (!file || !/^image\//.test(file.type)) {
+    showToast('画像ファイルを選んでください', 'error');
+    return;
+  }
+  const btn = document.getElementById('btnScheduleImageUpload');
+  const orig = btn.textContent;
+  isProcessingSchedule = true;
+  btn.disabled = true;
+  btn.textContent = '読み取り中...';
+  try {
+    const rawUrl = await fileToDataUrl(file);
+    let compressed;
+    try { compressed = await compressDataUrl(rawUrl, 1280, 0.85); }
+    catch (e) { compressed = rawUrl; }
+    const { mimeType, data } = dataUrlToBase64Parts(compressed);
+    const sys = buildScheduleSysPrompt('image');
+    const events = await callScheduleExtraction([
+      { text: '添付画像から予定を抽出してください。' },
+      { inlineData: { mimeType, data } }
+    ], sys);
+    const added = applyExtractedEvents(events);
+    if (added > 0) {
+      renderCalendar();
+      renderEventList();
+      showToast(added + ' 件追加したよ', 'success');
+    } else {
+      showToast('予定として読み取れませんでした', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast(String(e.message || e), 'error');
+  } finally {
+    isProcessingSchedule = false;
+    btn.disabled = false;
+    btn.textContent = orig;
+    document.getElementById('inputScheduleImage').value = '';
+  }
+}
+
 document.getElementById('btnSaveProfileName').addEventListener('click', () => {
   profile.name = document.getElementById('inputProfileName').value.trim();
   saveProfile();
@@ -2049,6 +2600,40 @@ document.getElementById('profileItemModal').addEventListener('click', e => {
   if (e.target.id === 'profileItemModal') closeProfileItemModal();
 });
 
+document.getElementById('btnCalPrev').addEventListener('click', () => {
+  calViewMonth--;
+  if (calViewMonth < 1) { calViewMonth = 12; calViewYear--; }
+  renderCalendar();
+});
+document.getElementById('btnCalNext').addEventListener('click', () => {
+  calViewMonth++;
+  if (calViewMonth > 12) { calViewMonth = 1; calViewYear++; }
+  renderCalendar();
+});
+document.getElementById('btnAddEvent').addEventListener('click', () => openEventModal(null));
+document.getElementById('btnSaveEvent').addEventListener('click', saveEventFromModal);
+document.getElementById('btnDeleteEvent').addEventListener('click', deleteEventFromModal);
+document.getElementById('btnCancelEvent').addEventListener('click', closeEventModal);
+document.getElementById('eventModal').addEventListener('click', e => {
+  if (e.target.id === 'eventModal') closeEventModal();
+});
+document.getElementById('btnAddScheduleByText').addEventListener('click', addScheduleByText);
+document.getElementById('btnScheduleImageUpload').addEventListener('click', () => {
+  document.getElementById('inputScheduleImage').click();
+});
+document.getElementById('inputScheduleImage').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if (f) addScheduleByImage(f);
+});
+document.getElementById('btnResetSchedule').addEventListener('click', () => {
+  if (!confirm('予定をすべて削除しますか?')) return;
+  schedule = { events: [] };
+  saveSchedule();
+  renderCalendar();
+  renderEventList();
+  showToast('予定をすべて削除しました', 'success');
+});
+
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   applyCharTheme(getActiveChar());
 });
@@ -2060,6 +2645,7 @@ function init() {
   updateCharDisplay();
   renderChat();
   renderProfileScreen();
+  renderScheduleScreen();
   updateApiWarning();
   document.body.classList.add('bg-cage');
   if (!settings.apiKey) {
