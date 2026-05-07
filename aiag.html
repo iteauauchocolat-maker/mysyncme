@@ -483,6 +483,20 @@ body.bg-cage .timestamp {
   z-index: 10;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
+.bottom-fade {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(60px + env(safe-area-inset-bottom));
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(255, 250, 240, 0) 0%, rgba(255, 250, 240, 0.7) 60%, rgba(255, 250, 240, 0.98) 100%);
+  pointer-events: none;
+  z-index: 9;
+}
+@media (prefers-color-scheme: dark) {
+  .bottom-fade {
+    background: linear-gradient(to bottom, rgba(28, 28, 30, 0) 0%, rgba(28, 28, 30, 0.7) 60%, rgba(28, 28, 30, 0.98) 100%);
+  }
+}
 .tab {
   flex: 1;
   min-width: 0;
@@ -848,7 +862,7 @@ body.bg-cage .timestamp {
   font-size: 14px;
 }
 .main-content {
-  padding: 64px 16px calc(60px + 8px + env(safe-area-inset-bottom));
+  padding: 100px 16px calc(60px + 8px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1831,6 +1845,7 @@ body.bg-cage .timestamp {
     <input type="file" id="inputAttach" accept="image/*,.pdf,.txt,.md,.json,.csv,.html" multiple style="display:none;">
   </div>
 
+  <div class="bottom-fade" aria-hidden="true"></div>
   <nav class="tabbar">
     <button class="tab active" data-screen="main">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
