@@ -155,43 +155,62 @@ body.bg-cage::after { opacity: 1; }
   color: var(--char-accent);
   font-size: 12px;
 }
+.chat-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+}
+.chat-top .header {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: none;
+  position: static;
+}
+body.bg-cage .chat-top {
+  background: rgba(255, 248, 235, 0.82);
+}
+@media (prefers-color-scheme: dark) {
+  body.bg-cage .chat-top {
+    background: rgba(35, 26, 18, 0.82);
+  }
+}
 .char-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 16px 8px;
+  padding: 4px 16px 10px;
 }
 .char-image-wrap {
-  width: 120px;
-  height: 120px;
+  width: 92px;
+  height: 92px;
   position: relative;
+  border-radius: 50%;
+  background: rgba(255, 246, 232, 0.96);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+body.bg-cage .char-image-wrap {
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 .char-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
-  transition: opacity 0.3s ease, filter 0.3s ease;
+  padding: 4px;
+  transition: opacity 0.3s ease;
   cursor: pointer;
   user-select: none;
   -webkit-user-drag: none;
-}
-body.bg-cage .char-image {
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(255, 245, 220, 0.4));
-}
-.char-name-label {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--text-sub);
-  font-weight: 500;
-}
-body.bg-cage .char-name-label {
-  color: #fff;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 3px 10px;
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  display: block;
 }
 .chat-list {
   flex: 1 0 auto;
@@ -653,23 +672,24 @@ body.bg-cage .timestamp {
 <div id="app">
 
   <div id="screen-chat" class="screen active">
-    <div class="header">
-      <button class="header-btn" id="btnOpenCharSelect">
-        <span class="char-switcher-name" id="headerCharName">ミル</span>
-        <span class="char-switcher-arrow">▼</span>
-      </button>
-      <div style="width:60px;"></div>
-    </div>
-
-    <div id="apiWarning" class="api-warning" style="display:none;">
-      ⚠️ APIキーが未設定です。「設定」タブで登録してください。
-    </div>
-
-    <div class="char-display">
-      <div class="char-image-wrap" id="charImageWrap">
-        <img class="char-image" id="charImage" alt="" draggable="false">
+    <div class="chat-top">
+      <div class="header">
+        <button class="header-btn" id="btnOpenCharSelect">
+          <span class="char-switcher-name" id="headerCharName">ミル</span>
+          <span class="char-switcher-arrow">▼</span>
+        </button>
+        <div style="width:60px;"></div>
       </div>
-      <div class="char-name-label" id="charNameLabel"></div>
+
+      <div id="apiWarning" class="api-warning" style="display:none;">
+        ⚠️ APIキーが未設定です。「設定」タブで登録してください。
+      </div>
+
+      <div class="char-display">
+        <div class="char-image-wrap" id="charImageWrap">
+          <img class="char-image" id="charImage" alt="" draggable="false">
+        </div>
+      </div>
     </div>
 
     <div id="chatList" class="chat-list"></div>
@@ -1053,7 +1073,6 @@ function setCharExpression(expr) {
 function updateCharDisplay() {
   const char = getActiveChar();
   document.getElementById('headerCharName').textContent = char.name;
-  document.getElementById('charNameLabel').textContent = char.name + ' ・ ' + char.personality;
 
   // 画像エラー時のフォールバック設定
   const wrap = document.getElementById('charImageWrap');
