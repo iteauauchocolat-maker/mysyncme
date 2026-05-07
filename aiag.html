@@ -764,6 +764,45 @@ body.bg-cage .timestamp {
   color: var(--text-sub);
 }
 .profile-name-preview b { color: var(--char-accent); font-weight: 600; }
+.route-chips { margin-bottom: 10px; }
+.route-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 12px;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 14px;
+  margin: 0 6px 6px 0;
+  color: var(--text);
+}
+.route-chip-x {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  font-family: inherit;
+}
+.route-chip-x:active { color: var(--error); }
+.route-add { display: flex; gap: 6px; }
+.route-add input { flex: 1; }
+.route-add-btn {
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--char-accent);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.route-add-btn:active { opacity: 0.85; }
 .modal-actions {
   display: flex;
   gap: 8px;
@@ -821,6 +860,16 @@ body.bg-cage .timestamp {
           <div class="hint">下のボタンを押すと、AI が内容を読み取って下の各カテゴリに自動で振り分けます。書いた内容は保存されます。</div>
         </div>
         <button class="btn" id="btnOrganizeProfile">AI に整理してもらう</button>
+      </div>
+
+      <div class="section">
+        <h3>通勤・通学路線</h3>
+        <div class="hint" style="margin-bottom:10px;">よく使う路線を登録できます(例: JR山手線、東京メトロ丸ノ内線)。チャットでも参照されます。</div>
+        <div id="routeChips" class="route-chips"></div>
+        <div class="route-add">
+          <input type="text" id="inputRouteAdd" placeholder="例: JR山手線">
+          <button class="route-add-btn" id="btnAddRoute" type="button">追加</button>
+        </div>
       </div>
 
       <div class="section">
@@ -1153,6 +1202,7 @@ const DEFAULT_PROFILE = {
   name: '',
   freeText: '',
   details: {},
+  routes: [],
   updatedAt: ''
 };
 
@@ -1204,16 +1254,17 @@ function saveChatHistory() {
 function loadProfile() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.profile);
-    if (!raw) return { ...DEFAULT_PROFILE, details: {} };
+    if (!raw) return { ...DEFAULT_PROFILE, details: {}, routes: [] };
     const p = JSON.parse(raw);
     return {
       name: typeof p.name === 'string' ? p.name : '',
       freeText: typeof p.freeText === 'string' ? p.freeText : '',
       details: p.details && typeof p.details === 'object' ? p.details : {},
+      routes: Array.isArray(p.routes) ? p.routes.filter(r => typeof r === 'string' && r.trim()) : [],
       updatedAt: p.updatedAt || ''
     };
   } catch (e) {
-    return { ...DEFAULT_PROFILE, details: {} };
+    return { ...DEFAULT_PROFILE, details: {}, routes: [] };
   }
 }
 function saveProfile() {
@@ -1893,7 +1944,55 @@ function renderProfileScreen() {
   document.getElementById('inputProfileName').value = profile.name || '';
   document.getElementById('inputProfileFreeText').value = profile.freeText || '';
   renderProfileNamePreview();
+  renderRouteChips();
   renderProfileCategories();
+}
+
+function renderRouteChips() {
+  const root = document.getElementById('routeChips');
+  if (!root) return;
+  root.innerHTML = '';
+  const arr = Array.isArray(profile.routes) ? profile.routes : [];
+  if (arr.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'profile-empty';
+    empty.textContent = 'まだ登録されていません';
+    root.appendChild(empty);
+    return;
+  }
+  arr.forEach((r, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'route-chip';
+    chip.textContent = r;
+    const x = document.createElement('button');
+    x.className = 'route-chip-x';
+    x.type = 'button';
+    x.textContent = '×';
+    x.setAttribute('aria-label', '削除');
+    x.addEventListener('click', () => {
+      profile.routes.splice(idx, 1);
+      saveProfile();
+      renderRouteChips();
+    });
+    chip.appendChild(x);
+    root.appendChild(chip);
+  });
+}
+
+function addRouteFromInput() {
+  const inp = document.getElementById('inputRouteAdd');
+  const v = inp.value.trim();
+  if (!v) return;
+  if (!Array.isArray(profile.routes)) profile.routes = [];
+  if (profile.routes.includes(v)) {
+    showToast('既に登録されています', 'error');
+    return;
+  }
+  profile.routes.push(v);
+  saveProfile();
+  inp.value = '';
+  renderRouteChips();
+  showToast('追加しました', 'success');
 }
 
 function openProfileItemModal(catId, index) {
@@ -1953,6 +2052,9 @@ function buildProfilePromptText() {
       });
     });
     parts.push(lines.join('\n'));
+  }
+  if (Array.isArray(profile.routes) && profile.routes.length > 0) {
+    parts.push('通勤・通学でよく使う路線: ' + profile.routes.join('、'));
   }
   if (parts.length === 0) return '';
   parts.push('この情報は会話の中で自然に活かしてください。毎回引用したり、長々と確認したりはしないでください。');
@@ -2561,11 +2663,19 @@ document.getElementById('inputProfileImage').addEventListener('change', e => {
 document.getElementById('btnProfileGeoUpload').addEventListener('click', readProfileFromGeolocation);
 
 document.getElementById('btnResetProfile').addEventListener('click', () => {
-  if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目)をすべて削除しますか?')) return;
-  profile = { ...DEFAULT_PROFILE, details: {} };
+  if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目・路線)をすべて削除しますか?')) return;
+  profile = { ...DEFAULT_PROFILE, details: {}, routes: [] };
   saveProfile();
   renderProfileScreen();
   showToast('プロフィールを削除したよ', 'success');
+});
+
+document.getElementById('btnAddRoute').addEventListener('click', addRouteFromInput);
+document.getElementById('inputRouteAdd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addRouteFromInput();
+  }
 });
 
 document.getElementById('btnSaveProfileItem').addEventListener('click', saveProfileItemFromModal);
