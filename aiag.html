@@ -730,6 +730,20 @@ body.bg-cage .timestamp {
         <button class="btn" id="btnOrganizeProfile">AI に整理してもらう</button>
       </div>
 
+      <div class="section">
+        <h3>画像から取り込む</h3>
+        <div class="field">
+          <label>読み取りモード</label>
+          <select id="profileImageMode">
+            <option value="content">写っているものから趣味・好きを読み取る</option>
+            <option value="text">画像内の文字を読み取る(名刺・メモなど)</option>
+          </select>
+          <div class="hint">画像をアップロードすると AI が読み取って、プロフィールの各カテゴリに反映します。画像は Google に送信されます(保存はされません)。</div>
+        </div>
+        <input type="file" id="inputProfileImage" accept="image/*" style="display:none;">
+        <button class="btn" id="btnProfileImageUpload">📷 画像を選んで読み取る</button>
+      </div>
+
       <div id="profileCategories"></div>
 
       <div class="section">
@@ -1838,6 +1852,162 @@ async function organizeProfileWithAI() {
   }
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('画像読み込みに失敗しました'));
+    reader.readAsDataURL(file);
+  });
+}
+function dataUrlToBase64Parts(dataUrl) {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) throw new Error('画像データの形式が不正です');
+  return { mimeType: m[1], data: m[2] };
+}
+
+async function readProfileFromImage(file, mode) {
+  if (isOrganizingProfile) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  if (!file || !/^image\//.test(file.type)) {
+    showToast('画像ファイルを選んでください', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnProfileImageUpload');
+  const origLabel = btn.textContent;
+  isOrganizingProfile = true;
+  btn.disabled = true;
+  btn.textContent = '読み取り中...';
+
+  try {
+    const rawUrl = await fileToDataUrl(file);
+    let compressed;
+    try {
+      compressed = await compressDataUrl(rawUrl, 1280, 0.85);
+    } catch (e) {
+      compressed = rawUrl;
+    }
+    const { mimeType, data } = dataUrlToBase64Parts(compressed);
+
+    const catList = PROFILE_CATEGORIES.map(c => '- ' + c.id + ' (' + c.name + '): ' + c.hint).join('\n');
+    const existing = {};
+    PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
+
+    let modeBlock;
+    if (mode === 'text') {
+      modeBlock =
+        '【解釈モード】画像内の文字をすべて読み取り(OCR)、ユーザーの情報として該当するものだけを抽出してください。\n' +
+        '想定例: 名刺、メモ書き、賞状、書類、看板、レシート、メッセージなど。\n' +
+        '読み取った文字情報のうち、ユーザー本人に関係する内容(名前・所属・興味分野・住所・連絡先など)をプロフィールに反映してください。\n' +
+        'ユーザーと無関係な文字は無視してください。';
+    } else {
+      modeBlock =
+        '【解釈モード】画像に写っているもの・場面から、ユーザーの趣味・好きなもの・関心事・ライフスタイルを推測してプロフィールに反映してください。\n' +
+        '想定例: ペット、コレクション、本、料理、習い事の様子、風景、お気に入りの場所など。\n' +
+        '画像から確実に読み取れる内容のみ追加してください。';
+    }
+
+    const sys =
+      'あなたはユーザープロフィールを画像から整理するアシスタントです。\n' +
+      '入力された画像と既存プロフィール JSON をもとに、更新後のプロフィール JSON を返してください。\n\n' +
+      modeBlock + '\n\n' +
+      '【カテゴリ一覧】\n' + catList + '\n\n' +
+      '【ルール】\n' +
+      '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
+      '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
+      '- 既存の項目は原則として残し、画像から読み取れる新情報を追加・更新する。\n' +
+      '- 既存の内容と矛盾する場合のみ、新しい情報で上書きする。\n' +
+      '- 重複する内容を作らない。\n' +
+      '- label は簡潔に。value はその内容。\n' +
+      '- 画像から読み取れない情報は推測で追加しない。\n' +
+      '- 値が空になる項目は出力しない。\n' +
+      '- カテゴリに振り分けにくいものは other に入れる。';
+
+    const userText =
+      '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n' +
+      '上記と添付画像をもとに、更新後の JSON を返してください。';
+
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+      + encodeURIComponent(settings.model)
+      + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+    const body = {
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: userText },
+          { inlineData: { mimeType, data } }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json'
+      },
+      systemInstruction: { parts: [{ text: sys }] }
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+      try {
+        const errData = await resp.json();
+        if (errData.error && errData.error.message) errMsg = errData.error.message;
+      } catch {}
+      throw new Error(errMsg);
+    }
+    const respData = await resp.json();
+    const candidate = respData.candidates && respData.candidates[0];
+    if (!candidate) throw new Error('AIから応答がありませんでした');
+    if (candidate.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
+    const parts = candidate.content && candidate.content.parts;
+    const raw = parts ? parts.map(p => p.text || '').join('').trim() : '';
+    if (!raw) throw new Error('応答が空でした');
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); }
+    catch (e) { throw new Error('AI の返答を JSON として解釈できませんでした'); }
+    const newDetails = parsed && parsed.details && typeof parsed.details === 'object' ? parsed.details : null;
+    if (!newDetails) throw new Error('JSON に details が含まれていませんでした');
+
+    const beforeCount = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
+    const sanitized = {};
+    PROFILE_CATEGORIES.forEach(c => {
+      const arr = newDetails[c.id];
+      if (!Array.isArray(arr)) { sanitized[c.id] = profileItems(c.id); return; }
+      sanitized[c.id] = arr
+        .filter(x => x && typeof x === 'object')
+        .map(x => ({
+          label: typeof x.label === 'string' ? x.label.trim() : '',
+          value: typeof x.value === 'string' ? x.value.trim() : ''
+        }))
+        .filter(x => x.label || x.value);
+    });
+    profile.details = sanitized;
+    saveProfile();
+    renderProfileCategories();
+    const afterCount = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
+    const diff = afterCount - beforeCount;
+    showToast(diff > 0 ? ('画像から ' + diff + ' 件追加したよ') : '画像を読み取ったけど、新しい情報は見つからなかった', diff > 0 ? 'success' : '');
+  } catch (e) {
+    console.error(e);
+    showToast(String(e.message || e), 'error');
+  } finally {
+    isOrganizingProfile = false;
+    btn.disabled = false;
+    btn.textContent = origLabel;
+    document.getElementById('inputProfileImage').value = '';
+  }
+}
+
 document.getElementById('btnSaveProfileName').addEventListener('click', () => {
   profile.name = document.getElementById('inputProfileName').value.trim();
   saveProfile();
@@ -1854,6 +2024,16 @@ document.getElementById('inputProfileFreeText').addEventListener('blur', () => {
 });
 
 document.getElementById('btnOrganizeProfile').addEventListener('click', organizeProfileWithAI);
+
+document.getElementById('btnProfileImageUpload').addEventListener('click', () => {
+  document.getElementById('inputProfileImage').click();
+});
+document.getElementById('inputProfileImage').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const mode = document.getElementById('profileImageMode').value;
+  readProfileFromImage(file, mode);
+});
 
 document.getElementById('btnResetProfile').addEventListener('click', () => {
   if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目)をすべて削除しますか?')) return;
