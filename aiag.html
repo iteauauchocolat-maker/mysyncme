@@ -2691,9 +2691,29 @@ async function callGeminiSimple(prompt, useSearch) {
 }
 
 function parseJsonFromText(text) {
+  // 1) そのまま
+  try { return JSON.parse(text.trim()); } catch (e) {}
+  // 2) ```json ... ``` を剥がす
   const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const body = (m ? m[1] : text).trim();
-  return JSON.parse(body);
+  if (m) {
+    try { return JSON.parse(m[1].trim()); } catch (e) {}
+  }
+  // 3) 最初の [ または { から、対応する閉じまでを抜き出して試す
+  const startA = text.indexOf('[');
+  const startO = text.indexOf('{');
+  let start = -1;
+  if (startA < 0) start = startO;
+  else if (startO < 0) start = startA;
+  else start = Math.min(startA, startO);
+  if (start >= 0) {
+    const endA = text.lastIndexOf(']');
+    const endO = text.lastIndexOf('}');
+    const end = Math.max(endA, endO);
+    if (end > start) {
+      try { return JSON.parse(text.slice(start, end + 1)); } catch (e) {}
+    }
+  }
+  throw new Error('JSON が見つからない');
 }
 
 let mainLoadingFlags = { weather: false, train: false, fortune: false, fukidashi: false, news: false };
@@ -2836,12 +2856,14 @@ function buildInterestText() {
   return lines.join('\n');
 }
 
+let lastNewsError = null;
 async function loadNews(force) {
   const cache = readMainCache('news');
   if (!force && isFresh(cache, MAIN_TTL.news)) return cache;
   if (mainLoadingFlags.news) return cache;
   if (!settings.apiKey) return cache;
   mainLoadingFlags.news = true;
+  lastNewsError = null;
   renderNews();
   try {
     const interests = buildInterestText();
@@ -2866,8 +2888,16 @@ async function loadNews(force) {
       '- url は実在のものを記載';
     const { text, sources } = await callGeminiSimple(prompt, true);
     let arr;
-    try { arr = parseJsonFromText(text); } catch (e) { arr = null; }
-    if (!Array.isArray(arr)) throw new Error('ニュースの応答が不正');
+    try {
+      arr = parseJsonFromText(text);
+    } catch (pe) {
+      console.error('news JSON parse failed. raw text:', text);
+      throw new Error('ニュースの応答が JSON 形式ではありませんでした(先頭抜粋: ' + text.slice(0, 80) + '…)');
+    }
+    if (!Array.isArray(arr)) {
+      if (arr && Array.isArray(arr.items)) arr = arr.items;
+      else throw new Error('ニュースの応答が配列ではありませんでした');
+    }
     const items = arr.slice(0, 5).map(o => ({
       title: String(o.title || '').trim(),
       summary: String(o.summary || '').trim(),
@@ -2877,10 +2907,12 @@ async function loadNews(force) {
     if (items.length === 0) throw new Error('ニュースが見つからなかった');
     const data = { items, sources: sources.slice(0, 5) };
     writeMainCache('news', null, data);
+    lastNewsError = null;
     return { ...data, ts: Date.now() };
   } catch (e) {
     console.error('news load failed', e);
-    return { error: String(e.message || e) };
+    lastNewsError = String(e.message || e);
+    return { error: lastNewsError };
   } finally {
     mainLoadingFlags.news = false;
     renderNews();
@@ -2902,8 +2934,13 @@ function renderNews() {
     meta.textContent = '';
     return;
   }
-  if (!cache || cache.error || !cache.items) {
-    list.innerHTML = '<div class="news-error">' + (cache && cache.error ? '取得に失敗: ' + escapeHtml(cache.error) : '取得ボタンを押してください') + '</div>';
+  if (lastNewsError && (!cache || !cache.items)) {
+    list.innerHTML = '<div class="news-error">取得に失敗しました<br><br>' + escapeHtml(lastNewsError) + '</div>';
+    meta.textContent = '';
+    return;
+  }
+  if (!cache || !cache.items) {
+    list.innerHTML = '<div class="news-error">取得ボタンを押してください</div>';
     meta.textContent = '';
     return;
   }
