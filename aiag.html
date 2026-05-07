@@ -819,7 +819,7 @@ body.bg-cage .timestamp {
   color: var(--text-sub);
   margin-bottom: 10px;
 }
-.news-item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.news-item-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .news-item-link {
   display: inline-flex;
   align-items: center;
@@ -837,6 +837,27 @@ body.bg-cage .timestamp {
 }
 .news-item-link.x-link { background: #000; color: #fff; }
 .news-item-link:active { opacity: 0.85; }
+.news-item-feedback {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.news-item-fb-btn {
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: 30px;
+  height: 28px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: transform 0.1s, background 0.1s;
+}
+.news-item-fb-btn:active { transform: scale(0.92); }
+.news-item-fb-btn.reacted.news-item-up { background: #FFE5B4; border-color: #E8A23A; }
+.news-item-fb-btn.reacted.news-item-down { background: #E8E8EC; border-color: #999; }
 .news-empty, .news-error {
   text-align: center;
   padding: 24px 12px;
@@ -3815,6 +3836,67 @@ function buildInterestText() {
 }
 
 let lastNewsError = null;
+
+const NEWS_SEEN_KEY = 'agent_news_seen';
+const NEWS_FEEDBACK_KEY = 'agent_news_feedback';
+const NEWS_SEEN_MAX = 80;
+const NEWS_FEEDBACK_TTL = 30 * 24 * 60 * 60 * 1000;
+
+function loadNewsSeen() {
+  try {
+    const raw = localStorage.getItem(NEWS_SEEN_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function addNewsSeen(titles) {
+  if (!Array.isArray(titles) || titles.length === 0) return;
+  let arr = loadNewsSeen();
+  titles.forEach(t => {
+    const s = String(t || '').trim();
+    if (!s) return;
+    arr = arr.filter(x => x !== s);
+    arr.unshift(s);
+  });
+  if (arr.length > NEWS_SEEN_MAX) arr = arr.slice(0, NEWS_SEEN_MAX);
+  try { localStorage.setItem(NEWS_SEEN_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function loadNewsFeedback() {
+  try {
+    const raw = localStorage.getItem(NEWS_FEEDBACK_KEY);
+    if (!raw) return { up: [], down: [] };
+    const o = JSON.parse(raw);
+    const now = Date.now();
+    const up = Array.isArray(o.up) ? o.up.filter(x => x && x.ts && now - x.ts < NEWS_FEEDBACK_TTL) : [];
+    const down = Array.isArray(o.down) ? o.down.filter(x => x && x.ts && now - x.ts < NEWS_FEEDBACK_TTL) : [];
+    return { up, down };
+  } catch (e) { return { up: [], down: [] }; }
+}
+function saveNewsFeedback(fb) {
+  try { localStorage.setItem(NEWS_FEEDBACK_KEY, JSON.stringify(fb)); } catch (e) {}
+}
+function addNewsFeedback(direction, item) {
+  const fb = loadNewsFeedback();
+  const list = direction === 'up' ? fb.up : fb.down;
+  const opposite = direction === 'up' ? fb.down : fb.up;
+  const oppositeName = direction === 'up' ? 'down' : 'up';
+  const entry = {
+    topic: (item.topic || '').trim(),
+    title: (item.title || '').trim().slice(0, 60),
+    ts: Date.now()
+  };
+  const dedup = list.filter(x => !(x.title === entry.title));
+  dedup.unshift(entry);
+  if (direction === 'up') fb.up = dedup.slice(0, 30);
+  else fb.down = dedup.slice(0, 30);
+  // remove from opposite list if reacted other way
+  const oppFiltered = opposite.filter(x => x.title !== entry.title);
+  if (direction === 'up') fb.down = oppFiltered;
+  else fb.up = oppFiltered;
+  saveNewsFeedback(fb);
+}
+
 async function loadNews(force) {
   const cache = readMainCache('news');
   if (!force && isFresh(cache, MAIN_TTL.news)) return cache;
@@ -3828,10 +3910,34 @@ async function loadNews(force) {
     const interestSection = interests
       ? '【ユーザーの興味・関心】\n' + interests + '\n\n'
       : '【ユーザーの興味・関心】未登録(一般的な日本のトレンドから選んでください)\n\n';
+    const seen = loadNewsSeen();
+    const seenSection = seen.length > 0
+      ? '【すでにユーザーに見せたニュース見出し(同じ話題は出さない、似た話題も避ける)】\n'
+        + seen.slice(0, 40).map(s => '- ' + s).join('\n') + '\n\n'
+      : '';
+    const fb = loadNewsFeedback();
+    const upSection = fb.up.length > 0
+      ? '【ユーザーが「興味あり 👍」と評価した話題(似た方向性のニュースを優先的に選ぶ)】\n'
+        + fb.up.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
+      : '';
+    const downSection = fb.down.length > 0
+      ? '【ユーザーが「興味なし 👎」と評価した話題(同じトピック・同じ方向性のニュースは避ける)】\n'
+        + fb.down.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
+      : '';
+    const todayStrLocal = todayStr();
     const prompt =
       interestSection +
-      '直近 24〜48 時間で X (旧 Twitter) や Web で話題になっているトピックのうち、上記の興味に関連するものを 5 件選んでください。\n' +
-      '関連する興味が薄い場合は、関連性の高いものを優先しつつ、最後の1〜2件は日本で広く話題のニュースを入れて構いません。\n\n' +
+      seenSection +
+      upSection +
+      downSection +
+      '今日は ' + todayStrLocal + ' です。\n' +
+      '直近 1〜3 日以内に X (旧 Twitter) や Web で話題になっている動きのある話題のうち、上記のユーザーの興味に関連するものを 5 件選んでください。\n\n' +
+      '【選定ルール】\n' +
+      '- 1 週間以上前のまとめ記事や古いトピックは避け、まさに今動いているニュースを優先する\n' +
+      '- ユーザー興味と直接関連が薄ければ、関連性の高いものを優先しつつ最後の 1〜2 件は日本で広く話題のニュースで補ってよい\n' +
+      '- 同じトピック(topic)に偏らないこと: 1 つのトピックは最大 2 件まで(できるだけ別々のトピックにばらけさせる)\n' +
+      '- すでに見せた話題、興味なし評価された話題と類似するものは出さない\n' +
+      '- 興味あり評価された話題と近い方向性のニュースは積極的に取り上げる\n\n' +
       '以下の JSON 配列のみで出力してください(コードブロックや説明文は禁止):\n' +
       '[\n' +
       '  {\n' +
@@ -3843,8 +3949,6 @@ async function loadNews(force) {
       '    "topicEmoji": "そのテーマを表す絵文字を 1 つ(例: 🤖 🏀 📺 🚃 🏛 ⚽ 🎵 🎮 💴 📰)"\n' +
       '  }\n' +
       ']\n\n' +
-      '- できるだけ新しい話題を優先\n' +
-      '- 同じテーマで重複しない\n' +
       '- url は実在のものを記載\n' +
       '- topic はユーザー興味との関連が分かる名前にする(該当なしなら「一般」)';
     const { text, sources } = await callGeminiSimple(prompt, true, { maxOutputTokens: 16384, temperature: 0.5 });
@@ -3870,6 +3974,7 @@ async function loadNews(force) {
     if (items.length === 0) throw new Error('ニュースが見つからなかった');
     const data = { items, sources: sources.slice(0, 5) };
     writeMainCache('news', null, data);
+    addNewsSeen(items.map(i => i.title));
     lastNewsError = null;
     return { ...data, ts: Date.now() };
   } catch (e) {
@@ -3948,6 +4053,37 @@ function renderNews() {
       xa.textContent = '𝕏 で話題を見る';
       actions.appendChild(xa);
     }
+    const fbWrap = document.createElement('div');
+    fbWrap.className = 'news-item-feedback';
+    const upBtn = document.createElement('button');
+    upBtn.className = 'news-item-fb-btn news-item-up';
+    upBtn.type = 'button';
+    upBtn.textContent = '👍';
+    upBtn.setAttribute('aria-label', 'こういう話題が好き');
+    upBtn.title = 'こういう話題が好き';
+    upBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      addNewsFeedback('up', it);
+      upBtn.classList.add('reacted');
+      downBtn.classList.remove('reacted');
+      showToast('似た話題を多めに出すね', 'success');
+    });
+    const downBtn = document.createElement('button');
+    downBtn.className = 'news-item-fb-btn news-item-down';
+    downBtn.type = 'button';
+    downBtn.textContent = '👎';
+    downBtn.setAttribute('aria-label', 'こういう話題はいらない');
+    downBtn.title = 'こういう話題はいらない';
+    downBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      addNewsFeedback('down', it);
+      downBtn.classList.add('reacted');
+      upBtn.classList.remove('reacted');
+      showToast('似た話題は減らすね', 'success');
+    });
+    fbWrap.appendChild(upBtn);
+    fbWrap.appendChild(downBtn);
+    actions.appendChild(fbWrap);
     if (actions.childElementCount > 0) card.appendChild(actions);
     list.appendChild(card);
   });
