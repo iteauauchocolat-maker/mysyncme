@@ -3302,7 +3302,14 @@ function buildFukidashiContextLines(weather, train, fortune) {
   const weatherLine = weather && !weather.error ? (weather.icon + ' ' + weather.summary + ' / 降水確率 ' + weather.precip) : '(なし)';
   const trainLine = train && !train.error ? (train.status === 'delay' ? '遅延あり: ' + train.detail.slice(0, 200) : '遅延なし') : '(なし)';
   const fortuneLine = fortune && !fortune.error ? (fortune.zodiacName + ' ★' + fortune.stars + ' ' + fortune.summary) : '(なし)';
-  return { eventsLines, weatherLine, trainLine, fortuneLine };
+  const newsCache = readMainCache('news');
+  const interestNews = (newsCache && Array.isArray(newsCache.items))
+    ? newsCache.items.filter(n => n.topic && n.topic !== '一般' && n.topic !== 'general').slice(0, 3)
+    : [];
+  const newsLines = interestNews.length
+    ? interestNews.map(n => '- [' + (n.topic || '') + '] ' + (n.title || '')).join('\n')
+    : '(なし)';
+  return { eventsLines, weatherLine, trainLine, fortuneLine, newsLines };
 }
 
 const FUKIDASHI_THEMES = [
@@ -3321,7 +3328,7 @@ async function loadFukidashi(ctx, force) {
   renderFukidashiTiles();
   try {
     const char = getActiveChar();
-    const { eventsLines, weatherLine, trainLine, fortuneLine } = buildFukidashiContextLines(
+    const { eventsLines, weatherLine, trainLine, fortuneLine, newsLines } = buildFukidashiContextLines(
       ctx && ctx.weather, ctx && ctx.train, ctx && ctx.fortune
     );
     const profileText = buildProfilePromptText();
@@ -3336,11 +3343,13 @@ async function loadFukidashi(ctx, force) {
       '【今日の天気】' + weatherLine + '\n' +
       '【鉄道遅延】' + trainLine + '\n' +
       '【今日の運勢】' + fortuneLine + '\n\n' +
+      '【ユーザーの興味に基づいて選ばれた最近のニュース】\n' + newsLines + '\n\n' +
       profileText + '\n' +
       '【出力形式】JSON 配列のみ ["セリフ1","セリフ2","セリフ3"]\n' +
       '- 各セリフは 30〜60 文字程度\n' +
       '- キャラクターの口調を維持(タメ口・敬語などキャラに合わせる)\n' +
-      '- 説明文・コードブロック・前置きは禁止';
+      '- 説明文・コードブロック・前置きは禁止\n' +
+      '- ニュースが (なし) でなければ、3 つのうち最大 1 つだけそのトピックをネタに使ってよい(必須ではない)。残り 2 つはニュースを使わない';
     const { text } = await callGeminiSimple(prompt, false);
     let arr;
     try { arr = parseJsonFromText(text); } catch (e) { arr = null; }
@@ -3366,14 +3375,17 @@ async function regenerateOneFukidashi(idx, ctx) {
   mainLoadingFlags.fukidashi = true;
   try {
     const char = getActiveChar();
-    const { eventsLines, weatherLine, trainLine, fortuneLine } = buildFukidashiContextLines(
+    const { eventsLines, weatherLine, trainLine, fortuneLine, newsLines } = buildFukidashiContextLines(
       ctx && ctx.weather, ctx && ctx.train, ctx && ctx.fortune
     );
     const profileText = buildProfilePromptText();
+    const newsHint = (idx === 2 && newsLines && newsLines !== '(なし)')
+      ? '\n\n【参考: ユーザー興味のニュース】\n' + newsLines + '\n（このうち 1 つをセリフのネタに使ってよい)'
+      : '';
     const prompt =
       'あなたはキャラクター「' + char.name + '」(' + char.species + '、' + char.personality + ')です。\n' +
       '以下のテーマに基づいて、ユーザーへの短い話しかけセリフを 1 つだけ生成してください。\n\n' +
-      '【テーマ】' + FUKIDASHI_THEMES[idx] + '\n\n' +
+      '【テーマ】' + FUKIDASHI_THEMES[idx] + newsHint + '\n\n' +
       '【スケジュール】\n' + eventsLines + '\n\n' +
       '【今日の天気】' + weatherLine + '\n' +
       '【鉄道遅延】' + trainLine + '\n' +
