@@ -4345,8 +4345,16 @@ function buildProfileExportText() {
     if (items.length === 0) return;
     lines.push('【' + cat.name + '】');
     items.forEach(it => {
-      const text = (typeof it === 'string') ? it : (it && it.text ? it.text : '');
-      if (text) lines.push('・' + text);
+      if (typeof it === 'string') {
+        if (it.trim()) lines.push('・' + it.trim());
+        return;
+      }
+      if (!it) return;
+      const label = (it.label || '').trim();
+      const value = (it.value || it.text || '').trim();
+      if (label && value) lines.push('・' + label + ': ' + value);
+      else if (value) lines.push('・' + value);
+      else if (label) lines.push('・' + label);
     });
     lines.push('');
   });
