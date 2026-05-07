@@ -224,6 +224,13 @@ body.bg-cage .char-image-wrap {
   color: var(--char-bubble-text);
   border-bottom-right-radius: 4px;
 }
+.bubble a {
+  color: var(--char-accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.bubble.user a { color: var(--char-bubble-text); font-weight: 600; }
+.bubble.ai a { color: var(--char-accent); }
 .bubble.ai {
   align-self: flex-start;
   background: var(--char-ai-bubble);
@@ -2226,7 +2233,7 @@ function renderChat() {
       }
       if (msg.content) {
         const tx = document.createElement('div');
-        tx.textContent = msg.content;
+        tx.innerHTML = linkifyChatText(msg.content);
         bubble.appendChild(tx);
       }
     }
@@ -2453,7 +2460,7 @@ async function callGemini(userMessage, attachments) {
   if (userParts.length === 0) userParts.push({ text: ' ' });
   contents.push({ role: 'user', parts: userParts });
 
-  const systemText = char.systemPrompt + buildProfilePromptText() + buildSchedulePromptText();
+  const systemText = char.systemPrompt + buildProfilePromptText() + buildSchedulePromptText() + buildChatBehaviorPromptText();
   const body = {
     contents: contents,
     generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
@@ -3756,6 +3763,16 @@ function addRouteFromInput() {
   showToast('追加しました', 'success');
 }
 
+function linkifyChatText(raw) {
+  if (!raw) return '';
+  const esc = String(raw).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+  return esc.replace(/(https?:\/\/[^\s<>"'\)\]、。」』]+)/g, url => {
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+  });
+}
+
 function linkifyDelayText(raw) {
   // HTML エスケープしてから URL を「詳細を見る」リンクに変換
   const esc = raw.replace(/[&<>"']/g, c => ({
@@ -3923,6 +3940,18 @@ function buildProfilePromptText() {
   if (parts.length === 0) return '';
   parts.push('この情報は会話の中で自然に活かしてください。毎回引用したり、長々と確認したりはしないでください。');
   return '\n\n' + parts.join('\n\n');
+}
+
+function buildChatBehaviorPromptText() {
+  return '\n\n【返事の中の URL の使い方】\n' +
+    '- ユーザーが「〇〇までの行き方/道順/ルート」「〇〇への経路」などを聞いてきたら、Google マップの経路リンクを返事に含めてください。\n' +
+    '  形式: https://www.google.com/maps/dir/?api=1&origin=<出発地>&destination=<目的地>&travelmode=transit\n' +
+    '  (徒歩は walking、車は driving、自転車は bicycling、電車・バスは transit。出発地が不明なときは origin を空にしてもよい)\n' +
+    '- ユーザーが「〇〇という店/場所/施設はどこ?」「近くの〇〇」などを聞いてきたら、Google マップ検索リンクを含めてください。\n' +
+    '  形式: https://www.google.com/maps/search/?api=1&query=<検索ワード>\n' +
+    '- 出発地・目的地・検索ワードは日本語のまま URL に入れてよい(クライアント側でエンコードされる)。スペースは + に置き換える。\n' +
+    '- それ以外でも、外部の関連ページがあれば https:// から始まる URL をそのまま本文に書いてよい。ユーザー側で自動的にタップ可能なリンクになる。\n' +
+    '- リンクは説明と一緒に自然に提示し、長い URL の塊だけを返さない。';
 }
 
 function buildSchedulePromptText() {
