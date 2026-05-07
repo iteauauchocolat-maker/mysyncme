@@ -159,53 +159,35 @@ body.bg-cage::after { opacity: 1; }
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--card);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid var(--border);
 }
 .chat-top .header {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom: none;
-  position: static;
-}
-body.bg-cage .chat-top {
-  background: rgba(255, 248, 235, 0.82);
-}
-@media (prefers-color-scheme: dark) {
-  body.bg-cage .chat-top {
-    background: rgba(35, 26, 18, 0.82);
-  }
-}
-.char-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4px 16px 10px;
+  position: relative;
+  min-height: 64px;
 }
 .char-image-wrap {
-  width: 92px;
-  height: 92px;
-  position: relative;
+  width: 52px;
+  height: 52px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: rgba(255, 246, 232, 0.96);
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.7);
   cursor: pointer;
 }
 body.bg-cage .char-image-wrap {
   box-shadow:
-    0 6px 16px rgba(0, 0, 0, 0.32),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+    0 4px 10px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
 }
 .char-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 4px;
+  padding: 3px;
   transition: opacity 0.3s ease;
   cursor: pointer;
   user-select: none;
@@ -581,7 +563,7 @@ body.bg-cage .timestamp {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 60px;
+  font-size: 32px;
   background: var(--card);
   border-radius: 50%;
 }
@@ -678,17 +660,14 @@ body.bg-cage .timestamp {
           <span class="char-switcher-name" id="headerCharName">ミル</span>
           <span class="char-switcher-arrow">▼</span>
         </button>
+        <div class="char-image-wrap" id="charImageWrap">
+          <img class="char-image" id="charImage" alt="" draggable="false">
+        </div>
         <div style="width:60px;"></div>
       </div>
 
       <div id="apiWarning" class="api-warning" style="display:none;">
         ⚠️ APIキーが未設定です。「設定」タブで登録してください。
-      </div>
-
-      <div class="char-display">
-        <div class="char-image-wrap" id="charImageWrap">
-          <img class="char-image" id="charImage" alt="" draggable="false">
-        </div>
       </div>
     </div>
 
