@@ -1577,6 +1577,16 @@ body.bg-cage .timestamp {
       </div>
 
       <div class="section">
+        <h3>テキストで出力 / 読み込み</h3>
+        <div class="hint" style="margin-bottom:10px;">予定と TODO をテキスト形式でクリップボードにコピーできます。同じ書式のテキストを下に貼り付けて「読み込んで追加」を押すと反映されます。まったく同じ項目はスキップされます。</div>
+        <button class="btn" id="btnExportSchedule">📋 テキストでコピー</button>
+        <div style="height:10px;"></div>
+        <textarea id="inputImportSchedule" rows="4" placeholder="ここにコピーしたテキストを貼り付け" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--card-solid); color:var(--text); font-family:inherit; font-size:13px; resize:vertical;"></textarea>
+        <div style="height:8px;"></div>
+        <button class="btn btn-secondary" id="btnImportSchedule">読み込んで追加</button>
+      </div>
+
+      <div class="section">
         <button class="btn btn-secondary" id="btnResetSchedule">予定をすべて削除</button>
       </div>
 
@@ -4692,6 +4702,183 @@ document.getElementById('inputScheduleImage').addEventListener('change', e => {
   const f = e.target.files && e.target.files[0];
   if (f) addScheduleByImage(f);
 });
+function buildScheduleExportText() {
+  const lines = [];
+  const events = (schedule.events || []).slice().sort((a, b) =>
+    (a.date + '|' + (a.time || '')).localeCompare(b.date + '|' + (b.time || ''))
+  );
+  if (events.length > 0) {
+    lines.push('【予定】');
+    events.forEach(e => {
+      const parts = [e.date || ''];
+      if (e.time) parts.push(e.endTime ? e.time + '〜' + e.endTime : e.time);
+      parts.push(e.title || '(無題)');
+      let line = '・' + parts.join(' ');
+      if (e.memo) line += ' / ' + e.memo;
+      lines.push(line);
+    });
+    lines.push('');
+  }
+  const todos = (schedule.todos || []).slice().sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const ad = a.deadline || '9999-99-99';
+    const bd = b.deadline || '9999-99-99';
+    return ad.localeCompare(bd);
+  });
+  if (todos.length > 0) {
+    lines.push('【TODO】');
+    todos.forEach(t => {
+      const cb = t.done ? '[x]' : '[ ]';
+      const dl = t.deadline ? ' 〆' + t.deadline : '';
+      lines.push('・' + cb + dl + ' ' + (t.title || '(無題)'));
+    });
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}
+
+async function exportScheduleAsText() {
+  const text = buildScheduleExportText();
+  if (!text) {
+    showToast('予定と TODO はまだ空です', 'error');
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('execCommand failed');
+    }
+    showToast('クリップボードにコピーしたよ', 'success');
+  } catch (e) {
+    console.error('copy failed', e);
+    showToast('コピーに失敗しました', 'error');
+  }
+}
+
+function parseScheduleText(text) {
+  const events = [];
+  const todos = [];
+  let section = null;
+  text.split(/\r?\n/).forEach(line => {
+    const t = line.trim();
+    if (!t) return;
+    const head = t.match(/^【\s*(予定|TODO)\s*】$/);
+    if (head) { section = head[1]; return; }
+    if (!section) return;
+    if (!t.startsWith('・')) return;
+    const body = t.replace(/^・\s*/, '');
+    if (section === '予定') {
+      const dateM = body.match(/^(\d{4}-\d{2}-\d{2})\s+(.*)$/);
+      if (!dateM) return;
+      const date = dateM[1];
+      let rest = dateM[2];
+      let time = '', endTime = '';
+      const timeM = rest.match(/^(\d{1,2}:\d{2})(?:〜(\d{1,2}:\d{2}))?\s+(.*)$/);
+      if (timeM) {
+        time = timeM[1];
+        endTime = timeM[2] || '';
+        rest = timeM[3];
+      }
+      let title = rest;
+      let memo = '';
+      const idx = rest.indexOf(' / ');
+      if (idx >= 0) {
+        title = rest.slice(0, idx).trim();
+        memo = rest.slice(idx + 3).trim();
+      }
+      title = title.trim();
+      if (title) events.push({ date, time, endTime, title, memo });
+    } else if (section === 'TODO') {
+      let body2 = body;
+      let done = false;
+      const checkM = body2.match(/^\[([ xX])\]\s+(.*)$/);
+      if (checkM) { done = checkM[1].toLowerCase() === 'x'; body2 = checkM[2]; }
+      let deadline = '';
+      const dlM = body2.match(/^〆\s*(\d{4}-\d{2}-\d{2})\s+(.*)$/);
+      if (dlM) { deadline = dlM[1]; body2 = dlM[2]; }
+      const title = body2.trim();
+      if (title) todos.push({ title, deadline, done });
+    }
+  });
+  return { events, todos };
+}
+
+function eventDedupKey(e) {
+  return [e.date || '', e.time || '', e.endTime || '', (e.title || '').trim(), (e.memo || '').trim()].join('|');
+}
+function todoDedupKey(t) {
+  return [(t.title || '').trim(), t.deadline || '', t.done ? '1' : '0'].join('|');
+}
+
+function importScheduleFromText() {
+  const ta = document.getElementById('inputImportSchedule');
+  const text = (ta.value || '').trim();
+  if (!text) {
+    showToast('読み込むテキストを貼り付けてね', 'error');
+    return;
+  }
+  const parsed = parseScheduleText(text);
+  if (parsed.events.length === 0 && parsed.todos.length === 0) {
+    showToast('読み込める内容が見つかりませんでした', 'error');
+    return;
+  }
+  if (!Array.isArray(schedule.events)) schedule.events = [];
+  if (!Array.isArray(schedule.todos)) schedule.todos = [];
+  const evKeys = new Set(schedule.events.map(eventDedupKey));
+  const tdKeys = new Set(schedule.todos.map(todoDedupKey));
+  let addedE = 0, addedT = 0;
+  parsed.events.forEach(e => {
+    const k = eventDedupKey(e);
+    if (evKeys.has(k)) return;
+    schedule.events.push({
+      id: 'ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      date: e.date,
+      time: e.time || '',
+      endTime: e.endTime || '',
+      title: e.title,
+      memo: e.memo || ''
+    });
+    evKeys.add(k);
+    addedE++;
+  });
+  parsed.todos.forEach(t => {
+    const k = todoDedupKey(t);
+    if (tdKeys.has(k)) return;
+    schedule.todos.push({
+      id: 'td_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      title: t.title,
+      deadline: t.deadline || '',
+      done: !!t.done,
+      createdAt: new Date().toISOString()
+    });
+    tdKeys.add(k);
+    addedT++;
+  });
+  saveSchedule();
+  renderScheduleScreen();
+  if (typeof renderScheduleTile === 'function') renderScheduleTile();
+  if (typeof renderTodoTile === 'function') renderTodoTile();
+  ta.value = '';
+  const totalParsed = parsed.events.length + parsed.todos.length;
+  const skipped = totalParsed - (addedE + addedT);
+  let msg = '予定 ' + addedE + ' 件、TODO ' + addedT + ' 件を追加';
+  if (skipped > 0) msg += ' (重複 ' + skipped + ' 件はスキップ)';
+  showToast(msg, 'success');
+}
+
+document.getElementById('btnExportSchedule').addEventListener('click', exportScheduleAsText);
+document.getElementById('btnImportSchedule').addEventListener('click', importScheduleFromText);
+
 document.getElementById('btnResetSchedule').addEventListener('click', () => {
   if (!confirm('予定と TODO をすべて削除しますか?')) return;
   schedule = { events: [], todos: [] };
