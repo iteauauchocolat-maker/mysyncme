@@ -633,6 +633,102 @@ body.bg-cage .timestamp {
   text-align: center;
 }
 
+.main-fukidashi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.fukidashi {
+  position: relative;
+  background: var(--char-accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 8px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.1s, transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  word-break: break-word;
+}
+.fukidashi::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 22px;
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--char-accent);
+}
+.fukidashi:active { opacity: 0.8; transform: scale(0.97); }
+.fukidashi-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.main-character-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+.main-character-img {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background-color: #FFF5F7;
+  background-color: var(--char-bubble, #F8C8D2);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.main-character-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.main-talk-btn {
+  position: relative;
+  background: var(--char-accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 16px 14px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  transition: opacity 0.1s, transform 0.1s;
+}
+.main-talk-btn::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid var(--char-accent);
+}
+.main-talk-btn:active { opacity: 0.9; transform: scale(0.99); }
+
 .main-grid-major {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1074,6 +1170,19 @@ body.bg-cage .timestamp {
       <div class="main-logo" id="mainLogo">
         <img id="mainLogoImg" src="images/logo.jpg" alt="" onload="document.getElementById('mainLogoText').hidden=true" onerror="this.remove()">
         <span class="main-logo-text" id="mainLogoText">mysyncme</span>
+      </div>
+
+      <div class="main-fukidashi-row">
+        <button class="fukidashi" data-fuki="0" type="button"><span class="fukidashi-text">取得中…</span></button>
+        <button class="fukidashi" data-fuki="1" type="button"><span class="fukidashi-text">取得中…</span></button>
+        <button class="fukidashi" data-fuki="2" type="button"><span class="fukidashi-text">取得中…</span></button>
+      </div>
+
+      <div class="main-character-row">
+        <div class="main-character-img">
+          <img id="mainCharImg" src="" alt="">
+        </div>
+        <button class="main-talk-btn" id="btnMainTalk" type="button">お部屋に行って<br>会話する</button>
       </div>
 
       <div class="main-grid-major">
@@ -1725,6 +1834,13 @@ document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
 });
 
+document.getElementById('btnMainTalk').addEventListener('click', () => switchScreen('chat'));
+document.querySelectorAll('.fukidashi').forEach(el => {
+  el.addEventListener('click', () => {
+    const idx = parseInt(el.dataset.fuki, 10) || 0;
+    handleFukidashiTap(idx);
+  });
+});
 document.getElementById('btnMainSchedule').addEventListener('click', () => switchScreen('schedule'));
 document.getElementById('btnMainTodo').addEventListener('click', () => switchScreen('schedule'));
 document.getElementById('btnMainWeather').addEventListener('click', showWeatherDetail);
@@ -2334,6 +2450,13 @@ function renderProfileScreen() {
 }
 
 function renderMainScreen() {
+  const char = getActiveChar();
+  const img = document.getElementById('mainCharImg');
+  if (img) {
+    img.src = char.expressions.default;
+    img.alt = char.name;
+  }
+  renderFukidashiTiles();
   renderScheduleTile();
   renderTodoTile();
   renderWeatherTile();
@@ -2682,7 +2805,23 @@ async function regenerateOneFukidashi(idx, ctx) {
 }
 
 // ===== Render =====
-function renderFukidashiTiles() { /* deprecated */ }
+function renderFukidashiTiles() {
+  const charId = getActiveChar().id;
+  const cache = readMainCache('fukidashi', charId);
+  const els = document.querySelectorAll('.fukidashi .fukidashi-text');
+  const items = (cache && cache.items) || [];
+  els.forEach((el, idx) => {
+    if (mainLoadingFlags.fukidashi && (!items[idx] || !items[idx].text)) {
+      el.textContent = '取得中…';
+    } else if (items[idx] && items[idx].text) {
+      el.textContent = items[idx].text;
+    } else if (!settings.apiKey) {
+      el.textContent = 'APIキーを設定してね';
+    } else {
+      el.textContent = '取得中…';
+    }
+  });
+}
 
 const WEATHER_ICON_MAP = {
   '晴': '☀️', '☀': '☀️', '☀️': '☀️',
@@ -2832,11 +2971,13 @@ async function refreshMainData(force) {
   if (!settings.apiKey) return;
   mainRefreshInFlight = true;
   try {
-    await Promise.all([
+    const [weather, train, fortune] = await Promise.all([
       loadWeather(force),
       loadTrain(force),
       loadFortune(force)
     ]);
+    await loadFukidashi({ weather, train, fortune }, force);
+    renderFukidashiTiles();
   } finally {
     mainRefreshInFlight = false;
   }
