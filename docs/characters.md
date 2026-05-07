@@ -49,7 +49,8 @@
 | 表情タグ | ファイル | 使う場面 |
 |---|---|---|
 | `[[EMOTION:munch]]` | `images/pui_munch.png` | 普段の状態(デフォルト・よく使う) |
-| `[[EMOTION:sleepy]]` | `images/pui_sleepy.png` | リラックス・落ち着いているとき・夜の話題 |
+| `[[EMOTION:smile]]` | `images/pui_smile.png` | 嬉しいとき・落ち着いて話を聞いているとき |
+| `[[EMOTION:sleepy]]` | `images/pui_sleepy.png` | リラックス・眠そう・夜の話題 |
 | `[[EMOTION:surprise]]` | `images/pui_surprise.png` | 興奮・驚き・はしゃぐとき(よく使う) |
 
 #### テーマカラー(ベージュ・茶系)
