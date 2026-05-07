@@ -1039,7 +1039,39 @@ body.bg-cage .timestamp {
 .main-tile-empty { color: var(--text-sub); font-size: 12px; }
 .main-tile-icon-big { font-size: 44px; line-height: 1; margin: 6px 0; }
 .main-tile-stars-bottom { font-size: 13px; letter-spacing: 1px; line-height: 1; color: #E8A23A; }
-.train-tile .main-tile-body { font-size: 22px; font-weight: 700; align-items: center; }
+.train-tile .main-tile-body { font-size: 22px; font-weight: 700; align-items: center; gap: 2px; }
+.train-tile .train-status { font-size: 22px; font-weight: 700; line-height: 1.15; }
+.train-tile .train-status.normal { color: #2A8455; }
+.train-tile .train-status.delay { color: #C0392B; }
+.train-tile .train-routes {
+  font-size: 11px;
+  font-weight: 600;
+  color: #C0392B;
+  opacity: 0.85;
+  line-height: 1.3;
+  text-align: center;
+  word-break: break-word;
+  margin-top: 1px;
+}
+@media (prefers-color-scheme: dark) {
+  .train-tile .train-status.normal { color: #82C99B; }
+  .train-tile .train-status.delay { color: #F08070; }
+  .train-tile .train-routes { color: #F08070; }
+}
+
+.main-tile-precip {
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #4A90D9;
+  margin-top: 2px;
+  line-height: 1;
+}
+.main-tile-precip:empty { display: none; }
+@media (prefers-color-scheme: dark) {
+  .main-tile-precip { color: #7FB3E0; }
+}
 
 .schedule-tile { border-color: #6CB7E8; }
 .train-tile { border-color: #62C39A; }
@@ -1471,6 +1503,7 @@ body.bg-cage .timestamp {
         <button class="main-tile small weather-tile" id="btnMainWeather" type="button">
           <div class="main-tile-label small"><span class="label-icon">☁️</span>天気</div>
           <div class="main-tile-icon-big" id="mainWeatherBody">…</div>
+          <div class="main-tile-precip" id="mainWeatherPrecip"></div>
         </button>
         <button class="main-tile small fortune-tile" id="btnMainFortune" type="button">
           <div class="main-tile-label small"><span class="label-icon">🔮</span>占い</div>
@@ -3748,20 +3781,43 @@ function renderTodoTile() {
 
 function renderWeatherTile() {
   const v = document.getElementById('mainWeatherBody');
+  const p = document.getElementById('mainWeatherPrecip');
   if (!v) return;
-  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = ''; return; }
-  if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; return; }
+  const setPrecip = (txt) => { if (p) p.textContent = txt || ''; };
+  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = ''; setPrecip(''); return; }
+  if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; setPrecip(''); return; }
   const cache = readMainCache('weather');
   if (cache && !cache.error && cache.icon) {
     v.style.fontSize = '';
     v.textContent = weatherEmoji(cache.icon);
+    setPrecip(cache.precip ? '💧 ' + cache.precip : '');
   } else if (cache && cache.error) {
     v.style.fontSize = '12px';
     v.textContent = '取得失敗';
+    setPrecip('');
   } else {
     v.style.fontSize = '';
     v.textContent = '…';
+    setPrecip('');
   }
+}
+
+function extractDelayedRoutes(detail) {
+  if (!detail) return [];
+  const out = [];
+  detail.split(/\r?\n/).forEach(line => {
+    const t = line.trim();
+    if (!t) return;
+    if (/^取得時刻/.test(t)) return;
+    const m = t.match(/^[・\-\*]?\s*([^:：]+?)\s*[:：]\s*(.+)$/);
+    if (!m) return;
+    const route = m[1].trim();
+    const status = m[2];
+    if (/(運休|遅れ|遅延|見合わせ|一部運休)/.test(status)) {
+      out.push(route);
+    }
+  });
+  return out;
 }
 
 function renderTrainTile() {
@@ -3771,7 +3827,17 @@ function renderTrainTile() {
   if (mainLoadingFlags.train) { v.textContent = '取得中…'; return; }
   const cache = readMainCache('train');
   if (cache && !cache.error && cache.status) {
-    v.textContent = cache.status === 'delay' ? '遅延あり' : '遅延なし';
+    if (cache.status === 'delay') {
+      const delayed = extractDelayedRoutes(cache.detail);
+      if (delayed.length > 0) {
+        v.innerHTML = '<div class="train-status delay">遅延あり</div>'
+          + '<div class="train-routes">(' + escapeHtml(delayed.join('、')) + ')</div>';
+      } else {
+        v.innerHTML = '<div class="train-status delay">遅延あり</div>';
+      }
+    } else {
+      v.innerHTML = '<div class="train-status normal">遅延なし</div>';
+    }
   } else if (cache && cache.error) {
     v.textContent = '取得失敗';
   } else {
