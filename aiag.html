@@ -609,17 +609,10 @@ body.bg-cage .timestamp {
   gap: 14px;
 }
 .main-logo {
-  background: linear-gradient(135deg, var(--char-accent), var(--char-bubble));
-  color: #fff;
   border-radius: 18px;
-  min-height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   overflow: hidden;
 }
 .main-logo img {
@@ -628,143 +621,124 @@ body.bg-cage .timestamp {
   display: block;
   border-radius: 18px;
 }
-.main-logo-text { padding: 16px; line-height: 1.2; }
-
-.main-fukidashi-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.fukidashi {
-  position: relative;
-  background: var(--char-accent);
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  padding: 10px 8px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  line-height: 1.4;
-  text-align: center;
-  cursor: pointer;
-  min-height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.1s, transform 0.1s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  word-break: break-word;
-}
-.fukidashi::after {
-  content: '';
-  position: absolute;
-  bottom: -7px;
-  left: 22px;
-  width: 0; height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid var(--char-accent);
-}
-.fukidashi:active { opacity: 0.8; transform: scale(0.97); }
-.fukidashi-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.main-character-row {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 14px;
-  align-items: center;
-}
-.main-character-img {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background-color: #FFF5F7;
-  background-color: var(--char-bubble, #F8C8D2);
-  border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.main-character-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.main-talk-btn {
-  position: relative;
-  background: var(--char-accent);
-  color: #fff;
-  border: none;
-  border-radius: 14px;
-  padding: 16px 14px;
-  font-family: inherit;
-  font-size: 17px;
+.main-logo-text {
+  padding: 18px 16px;
+  font-size: 24px;
   font-weight: 700;
-  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: var(--char-accent);
+  background: var(--card);
+  border-radius: 18px;
+  width: 100%;
   text-align: center;
-  cursor: pointer;
-  min-height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
-  transition: opacity 0.1s, transform 0.1s;
 }
-.main-talk-btn::before {
-  content: '';
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 0; height: 0;
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  border-right: 10px solid var(--char-accent);
-}
-.main-talk-btn:active { opacity: 0.9; transform: scale(0.99); }
 
-.main-action-grid {
+.main-grid-major {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.main-action-btn {
-  aspect-ratio: 1.15;
+.main-grid-mixed {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+}
+.main-grid-apps {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.main-tile {
   border: none;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #E89A5C;
   color: #fff;
   font-family: inherit;
-  font-weight: 700;
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.10);
+  transition: opacity 0.1s, transform 0.1s;
+  text-align: left;
+  min-height: 130px;
+}
+.main-tile:active { opacity: 0.9; transform: scale(0.99); }
+.main-tile.small {
   align-items: center;
   justify-content: center;
+  text-align: center;
+  padding: 10px 6px;
+}
+.main-tile-label {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.main-tile-label.small { font-size: 13px; font-weight: 700; }
+.main-tile-body {
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.main-tile-row {
+  display: flex;
   gap: 6px;
-  padding: 10px 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  transition: opacity 0.1s, transform 0.1s;
+  align-items: baseline;
 }
-.main-action-btn:active { opacity: 0.85; transform: scale(0.97); }
-.main-action-label { font-size: 16px; }
-.main-action-value { font-size: 12px; opacity: 0.95; font-weight: 500; min-height: 14px; }
-.main-action-btn.ext {
-  background: #4FA8D8;
-  aspect-ratio: 1.6;
+.main-tile-row .time { font-size: 11px; opacity: 0.9; flex-shrink: 0; min-width: 38px; }
+.main-tile-row .title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.main-action-btn.ext .main-action-label { font-size: 16px; }
+.main-tile-empty { opacity: 0.85; font-size: 12px; }
+.main-tile-icon-big { font-size: 44px; line-height: 1; margin: 6px 0; }
+.main-tile-stars-bottom { font-size: 13px; letter-spacing: 1px; line-height: 1; }
+.train-tile .main-tile-body { font-size: 22px; font-weight: 700; align-items: center; }
 
 @media (prefers-color-scheme: dark) {
-  .main-action-btn { background: #C7813F; }
-  .main-action-btn.ext { background: #3A8AB8; }
+  .main-tile { background: #C7813F; }
 }
 
-.main-tile-icon { font-size: 22px; line-height: 1; }
-.main-tile-stars { font-size: 13px; letter-spacing: 1px; }
+.app-btn {
+  border: none;
+  border-radius: 12px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.10);
+  transition: opacity 0.1s, transform 0.1s;
+  word-break: keep-all;
+  text-align: center;
+}
+.app-btn:active { opacity: 0.85; transform: scale(0.95); }
+.app-btn.line { background: #06C755; }
+.app-btn.mail { background: #5BACE2; }
+.app-btn.x { background: #000; }
+.app-btn.instagram {
+  background: linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%);
+  font-size: 10px;
+}
+.app-btn.amazon { background: #232F3E; color: #FF9900; font-size: 10px; }
+.app-btn.spotify { background: #1DB954; }
 .main-detail-content {
   white-space: pre-wrap;
   font-size: 14px;
@@ -1006,6 +980,72 @@ body.bg-cage .timestamp {
   cursor: pointer;
 }
 .route-add-btn:active { opacity: 0.85; }
+
+.todo-add {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.todo-add input[type="text"] {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  min-width: 0;
+}
+.todo-add input[type="date"] {
+  padding: 8px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-solid);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.todo-item:last-child { border-bottom: none; }
+.todo-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--char-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--char-accent);
+  font-size: 14px;
+  line-height: 1;
+}
+.todo-check.done { background: var(--char-accent); color: #fff; }
+.todo-body { flex: 1; min-width: 0; }
+.todo-title { font-size: 14px; line-height: 1.4; color: var(--text); word-break: break-word; }
+.todo-item.done .todo-title { text-decoration: line-through; color: var(--text-sub); }
+.todo-deadline { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+.todo-deadline.overdue { color: var(--error); font-weight: 600; }
+.todo-del {
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.todo-del:active { color: var(--error); }
+.todo-empty { text-align: center; color: var(--text-sub); font-size: 13px; padding: 12px; }
 .delay-detail-link {
   display: inline-block;
   margin-left: 6px;
@@ -1036,38 +1076,40 @@ body.bg-cage .timestamp {
         <span class="main-logo-text" id="mainLogoText">mysyncme</span>
       </div>
 
-      <div class="main-fukidashi-row">
-        <button class="fukidashi" data-fuki="0" type="button"><span class="fukidashi-text">準備中…</span></button>
-        <button class="fukidashi" data-fuki="1" type="button"><span class="fukidashi-text">準備中…</span></button>
-        <button class="fukidashi" data-fuki="2" type="button"><span class="fukidashi-text">準備中…</span></button>
-      </div>
-
-      <div class="main-character-row">
-        <div class="main-character-img">
-          <img id="mainCharImg" src="" alt="">
-        </div>
-        <button class="main-talk-btn" id="btnMainTalk" type="button">お部屋に行って<br>会話する</button>
-      </div>
-
-      <div class="main-action-grid">
-        <button class="main-action-btn act-weather" id="btnMainWeather" type="button">
-          <span class="main-action-label">天気</span>
-          <span class="main-action-value" id="mainWeatherValue">取得中…</span>
+      <div class="main-grid-major">
+        <button class="main-tile schedule-tile" id="btnMainSchedule" type="button">
+          <div class="main-tile-label">スケジュール</div>
+          <div class="main-tile-body" id="mainScheduleBody"></div>
         </button>
-        <button class="main-action-btn act-train" id="btnMainTrain" type="button">
-          <span class="main-action-label">鉄道</span>
-          <span class="main-action-value" id="mainTrainValue">取得中…</span>
-        </button>
-        <button class="main-action-btn act-fortune" id="btnMainFortune" type="button">
-          <span class="main-action-label">占い</span>
-          <span class="main-action-value" id="mainFortuneValue">取得中…</span>
+        <button class="main-tile train-tile" id="btnMainTrain" type="button">
+          <div class="main-tile-label">鉄道</div>
+          <div class="main-tile-body" id="mainTrainBody">取得中…</div>
         </button>
       </div>
 
-      <div class="main-action-grid">
-        <button class="main-action-btn ext" id="btnMainLine" type="button"><span class="main-action-label">LINE</span></button>
-        <button class="main-action-btn ext" id="btnMainMail" type="button"><span class="main-action-label">メール</span></button>
-        <button class="main-action-btn ext" id="btnMainX" type="button"><span class="main-action-label">X</span></button>
+      <div class="main-grid-mixed">
+        <button class="main-tile todo-tile" id="btnMainTodo" type="button">
+          <div class="main-tile-label">TODO</div>
+          <div class="main-tile-body" id="mainTodoBody"></div>
+        </button>
+        <button class="main-tile small weather-tile" id="btnMainWeather" type="button">
+          <div class="main-tile-label small">天気</div>
+          <div class="main-tile-icon-big" id="mainWeatherBody">…</div>
+        </button>
+        <button class="main-tile small fortune-tile" id="btnMainFortune" type="button">
+          <div class="main-tile-label small">占い</div>
+          <div class="main-tile-icon-big" id="mainFortuneIcon">…</div>
+          <div class="main-tile-stars-bottom" id="mainFortuneStars"></div>
+        </button>
+      </div>
+
+      <div class="main-grid-apps">
+        <button class="app-btn line" id="btnMainLine" type="button" aria-label="LINE">LINE</button>
+        <button class="app-btn mail" id="btnMainMail" type="button" aria-label="メール">メール</button>
+        <button class="app-btn x" id="btnMainX" type="button" aria-label="X">X</button>
+        <button class="app-btn instagram" id="btnMainInsta" type="button" aria-label="Instagram">インスタ</button>
+        <button class="app-btn amazon" id="btnMainAmazon" type="button" aria-label="Amazon">amazon</button>
+        <button class="app-btn spotify" id="btnMainSpotify" type="button" aria-label="Spotify">Spotify</button>
       </div>
     </div>
   </div>
@@ -1188,6 +1230,18 @@ body.bg-cage .timestamp {
           <button class="profile-cat-add" id="btnAddEvent">+ 追加</button>
         </div>
         <div id="eventList"></div>
+      </div>
+
+      <div class="section">
+        <div class="event-list-head">
+          <h3>TODO</h3>
+        </div>
+        <div class="todo-add">
+          <input type="text" id="inputTodoTitle" placeholder="やること">
+          <input type="date" id="inputTodoDeadline">
+          <button class="route-add-btn" id="btnAddTodo" type="button">追加</button>
+        </div>
+        <div id="todoList"></div>
       </div>
 
       <div class="section">
@@ -1586,11 +1640,14 @@ function hasAnyProfileDetail() {
 function loadSchedule() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.schedule);
-    if (!raw) return { events: [] };
+    if (!raw) return { events: [], todos: [] };
     const s = JSON.parse(raw);
-    return { events: Array.isArray(s.events) ? s.events : [] };
+    return {
+      events: Array.isArray(s.events) ? s.events : [],
+      todos: Array.isArray(s.todos) ? s.todos : []
+    };
   } catch (e) {
-    return { events: [] };
+    return { events: [], todos: [] };
   }
 }
 function saveSchedule() {
@@ -1660,6 +1717,7 @@ function switchScreen(name) {
     document.body.classList.remove('bg-cage');
   }
   if (name === 'main') {
+    renderMainScreen();
     refreshMainData(false);
   }
 }
@@ -1667,19 +1725,17 @@ document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
 });
 
-document.getElementById('btnMainTalk').addEventListener('click', () => switchScreen('chat'));
-document.querySelectorAll('.fukidashi').forEach(el => {
-  el.addEventListener('click', () => {
-    const idx = parseInt(el.dataset.fuki, 10) || 0;
-    handleFukidashiTap(idx);
-  });
-});
+document.getElementById('btnMainSchedule').addEventListener('click', () => switchScreen('schedule'));
+document.getElementById('btnMainTodo').addEventListener('click', () => switchScreen('schedule'));
 document.getElementById('btnMainWeather').addEventListener('click', showWeatherDetail);
 document.getElementById('btnMainTrain').addEventListener('click', showTrainDetail);
 document.getElementById('btnMainFortune').addEventListener('click', showFortuneDetail);
 document.getElementById('btnMainLine').addEventListener('click', () => { window.location.href = 'line://'; });
 document.getElementById('btnMainMail').addEventListener('click', () => { window.location.href = 'mailto:'; });
 document.getElementById('btnMainX').addEventListener('click', () => { window.open('https://x.com/', '_blank'); });
+document.getElementById('btnMainInsta').addEventListener('click', () => { window.location.href = 'instagram://'; });
+document.getElementById('btnMainAmazon').addEventListener('click', () => { window.open('https://www.amazon.co.jp/', '_blank'); });
+document.getElementById('btnMainSpotify').addEventListener('click', () => { window.location.href = 'spotify://'; });
 
 document.getElementById('btnCloseMainDetail').addEventListener('click', closeMainDetailModal);
 document.getElementById('btnRefreshMainDetail').addEventListener('click', refreshCurrentDetail);
@@ -2278,13 +2334,8 @@ function renderProfileScreen() {
 }
 
 function renderMainScreen() {
-  const char = getActiveChar();
-  const img = document.getElementById('mainCharImg');
-  if (img) {
-    img.src = char.expressions.default;
-    img.alt = char.name;
-  }
-  renderFukidashiTiles();
+  renderScheduleTile();
+  renderTodoTile();
   renderWeatherTile();
   renderTrainTile();
   renderFortuneTile();
@@ -2631,41 +2682,115 @@ async function regenerateOneFukidashi(idx, ctx) {
 }
 
 // ===== Render =====
-function renderFukidashiTiles() {
-  const charId = getActiveChar().id;
-  const cache = readMainCache('fukidashi', charId);
-  const els = document.querySelectorAll('.fukidashi .fukidashi-text');
-  const items = (cache && cache.items) || [];
-  els.forEach((el, idx) => {
-    if (mainLoadingFlags.fukidashi && (!items[idx] || !items[idx].text)) {
-      el.textContent = '取得中…';
-    } else if (items[idx] && items[idx].text) {
-      el.textContent = items[idx].text;
-    } else if (!settings.apiKey) {
-      el.textContent = 'APIキーを設定してね';
-    } else {
-      el.textContent = '取得中…';
-    }
+function renderFukidashiTiles() { /* deprecated */ }
+
+const WEATHER_ICON_MAP = {
+  '晴': '☀️', '☀': '☀️', '☀️': '☀️',
+  '曇': '☁️', '☁': '☁️', '☁️': '☁️',
+  '⛅': '⛅', '晴のち曇': '⛅', '曇のち晴': '⛅',
+  '雨': '🌧️', '🌧': '🌧️', '🌧️': '🌧️',
+  '雪': '❄️', '❄': '❄️',
+  '雷': '⛈️', '⛈': '⛈️',
+  '霧': '🌫️'
+};
+function weatherEmoji(s) {
+  if (!s) return '…';
+  if (WEATHER_ICON_MAP[s]) return WEATHER_ICON_MAP[s];
+  if (/雷/.test(s)) return '⛈️';
+  if (/雪/.test(s)) return '❄️';
+  if (/雨/.test(s)) return '🌧️';
+  if (/曇/.test(s) && /晴/.test(s)) return '⛅';
+  if (/曇/.test(s)) return '☁️';
+  if (/晴/.test(s)) return '☀️';
+  return s;
+}
+
+function renderScheduleTile() {
+  const body = document.getElementById('mainScheduleBody');
+  if (!body) return;
+  body.innerHTML = '';
+  const today = todayStr();
+  const events = (schedule.events || [])
+    .filter(e => e.date === today)
+    .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'))
+    .slice(0, 3);
+  if (events.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'main-tile-empty';
+    e.textContent = '今日の予定はありません';
+    body.appendChild(e);
+    return;
+  }
+  events.forEach(ev => {
+    const row = document.createElement('div');
+    row.className = 'main-tile-row';
+    const t = document.createElement('span');
+    t.className = 'time';
+    t.textContent = ev.time || '終日';
+    const ti = document.createElement('span');
+    ti.className = 'title';
+    ti.textContent = ev.title || '(無題)';
+    row.appendChild(t);
+    row.appendChild(ti);
+    body.appendChild(row);
+  });
+}
+
+function renderTodoTile() {
+  const body = document.getElementById('mainTodoBody');
+  if (!body) return;
+  body.innerHTML = '';
+  const todos = (schedule.todos || [])
+    .filter(t => !t.done)
+    .sort((a, b) => {
+      const ad = a.deadline || '9999-99-99';
+      const bd = b.deadline || '9999-99-99';
+      if (ad !== bd) return ad < bd ? -1 : 1;
+      return (a.createdAt || '').localeCompare(b.createdAt || '');
+    })
+    .slice(0, 3);
+  if (todos.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'main-tile-empty';
+    e.textContent = '未完了の TODO はありません';
+    body.appendChild(e);
+    return;
+  }
+  todos.forEach(td => {
+    const row = document.createElement('div');
+    row.className = 'main-tile-row';
+    const t = document.createElement('span');
+    t.className = 'time';
+    t.textContent = td.deadline ? td.deadline.slice(5) : '〆なし';
+    const ti = document.createElement('span');
+    ti.className = 'title';
+    ti.textContent = td.title || '(無題)';
+    row.appendChild(t);
+    row.appendChild(ti);
+    body.appendChild(row);
   });
 }
 
 function renderWeatherTile() {
-  const v = document.getElementById('mainWeatherValue');
+  const v = document.getElementById('mainWeatherBody');
   if (!v) return;
-  if (!profile.address) { v.textContent = '住所未設定'; return; }
-  if (mainLoadingFlags.weather) { v.textContent = '取得中…'; return; }
+  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = ''; return; }
+  if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; return; }
   const cache = readMainCache('weather');
   if (cache && !cache.error && cache.icon) {
-    v.innerHTML = '<span class="main-tile-icon">' + escapeHtml(cache.icon) + '</span> ' + escapeHtml(cache.precip || '');
+    v.style.fontSize = '';
+    v.textContent = weatherEmoji(cache.icon);
   } else if (cache && cache.error) {
+    v.style.fontSize = '12px';
     v.textContent = '取得失敗';
   } else {
-    v.textContent = '取得中…';
+    v.style.fontSize = '';
+    v.textContent = '…';
   }
 }
 
 function renderTrainTile() {
-  const v = document.getElementById('mainTrainValue');
+  const v = document.getElementById('mainTrainBody');
   if (!v) return;
   if (!Array.isArray(profile.routes) || profile.routes.length === 0) { v.textContent = '路線未設定'; return; }
   if (mainLoadingFlags.train) { v.textContent = '取得中…'; return; }
@@ -2680,18 +2805,23 @@ function renderTrainTile() {
 }
 
 function renderFortuneTile() {
-  const v = document.getElementById('mainFortuneValue');
-  if (!v) return;
-  if (!getZodiac(profile.birthday)) { v.textContent = '誕生日未設定'; return; }
-  if (mainLoadingFlags.fortune) { v.textContent = '取得中…'; return; }
+  const ic = document.getElementById('mainFortuneIcon');
+  const st = document.getElementById('mainFortuneStars');
+  if (!ic || !st) return;
+  if (!getZodiac(profile.birthday)) { ic.textContent = '?'; ic.style.fontSize = '20px'; st.textContent = '誕生日未設定'; return; }
+  ic.style.fontSize = '';
+  if (mainLoadingFlags.fortune) { ic.textContent = '…'; st.textContent = ''; return; }
   const cache = readMainCache('fortune');
   if (cache && !cache.error && cache.stars) {
-    const stars = '★'.repeat(cache.stars) + '☆'.repeat(5 - cache.stars);
-    v.innerHTML = '<span class="main-tile-icon">' + escapeHtml(cache.zodiacEmoji) + '</span> <span class="main-tile-stars">' + stars + '</span>';
+    ic.textContent = cache.zodiacEmoji;
+    st.textContent = '★'.repeat(cache.stars) + '☆'.repeat(5 - cache.stars);
   } else if (cache && cache.error) {
-    v.textContent = '取得失敗';
+    ic.textContent = '?';
+    ic.style.fontSize = '20px';
+    st.textContent = '取得失敗';
   } else {
-    v.textContent = '取得中…';
+    ic.textContent = '…';
+    st.textContent = '';
   }
 }
 
@@ -2702,13 +2832,11 @@ async function refreshMainData(force) {
   if (!settings.apiKey) return;
   mainRefreshInFlight = true;
   try {
-    const [weather, train, fortune] = await Promise.all([
+    await Promise.all([
       loadWeather(force),
       loadTrain(force),
       loadFortune(force)
     ]);
-    await loadFukidashi({ weather, train, fortune }, force);
-    renderFukidashiTiles();
   } finally {
     mainRefreshInFlight = false;
   }
@@ -3387,6 +3515,106 @@ function renderScheduleScreen() {
   if (!selectedDateStr) selectedDateStr = todayStr();
   renderCalendar();
   renderEventList();
+  renderTodoList();
+}
+
+function sortedTodos() {
+  if (!Array.isArray(schedule.todos)) schedule.todos = [];
+  return schedule.todos.slice().sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    const ad = a.deadline || '9999-99-99';
+    const bd = b.deadline || '9999-99-99';
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    return (a.createdAt || '').localeCompare(b.createdAt || '');
+  });
+}
+
+function renderTodoList() {
+  const list = document.getElementById('todoList');
+  if (!list) return;
+  list.innerHTML = '';
+  const todos = sortedTodos();
+  if (todos.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'todo-empty';
+    empty.textContent = 'まだ TODO はありません';
+    list.appendChild(empty);
+    return;
+  }
+  const today = todayStr();
+  todos.forEach(td => {
+    const item = document.createElement('div');
+    item.className = 'todo-item' + (td.done ? ' done' : '');
+    const check = document.createElement('button');
+    check.className = 'todo-check' + (td.done ? ' done' : '');
+    check.type = 'button';
+    check.textContent = td.done ? '✓' : '';
+    check.setAttribute('aria-label', td.done ? '未完了に戻す' : '完了にする');
+    check.addEventListener('click', () => toggleTodo(td.id));
+    const body = document.createElement('div');
+    body.className = 'todo-body';
+    const title = document.createElement('div');
+    title.className = 'todo-title';
+    title.textContent = td.title || '(無題)';
+    body.appendChild(title);
+    if (td.deadline) {
+      const dl = document.createElement('div');
+      dl.className = 'todo-deadline' + (!td.done && td.deadline < today ? ' overdue' : '');
+      dl.textContent = '〆 ' + td.deadline;
+      body.appendChild(dl);
+    }
+    const del = document.createElement('button');
+    del.className = 'todo-del';
+    del.type = 'button';
+    del.textContent = '×';
+    del.setAttribute('aria-label', '削除');
+    del.addEventListener('click', () => deleteTodo(td.id));
+    item.appendChild(check);
+    item.appendChild(body);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+function addTodoFromInput() {
+  const titleEl = document.getElementById('inputTodoTitle');
+  const dlEl = document.getElementById('inputTodoDeadline');
+  const title = titleEl.value.trim();
+  if (!title) {
+    showToast('やることを入力してね', 'error');
+    titleEl.focus();
+    return;
+  }
+  if (!Array.isArray(schedule.todos)) schedule.todos = [];
+  schedule.todos.push({
+    id: 'td_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    title: title,
+    deadline: dlEl.value || '',
+    done: false,
+    createdAt: new Date().toISOString()
+  });
+  saveSchedule();
+  titleEl.value = '';
+  dlEl.value = '';
+  renderTodoList();
+  renderTodoTile();
+}
+
+function toggleTodo(id) {
+  const td = schedule.todos.find(t => t.id === id);
+  if (!td) return;
+  td.done = !td.done;
+  saveSchedule();
+  renderTodoList();
+  renderTodoTile();
+}
+
+function deleteTodo(id) {
+  if (!Array.isArray(schedule.todos)) return;
+  schedule.todos = schedule.todos.filter(t => t.id !== id);
+  saveSchedule();
+  renderTodoList();
+  renderTodoTile();
 }
 
 function openEventModal(id) {
@@ -3713,12 +3941,18 @@ document.getElementById('inputScheduleImage').addEventListener('change', e => {
   if (f) addScheduleByImage(f);
 });
 document.getElementById('btnResetSchedule').addEventListener('click', () => {
-  if (!confirm('予定をすべて削除しますか?')) return;
-  schedule = { events: [] };
+  if (!confirm('予定と TODO をすべて削除しますか?')) return;
+  schedule = { events: [], todos: [] };
   saveSchedule();
-  renderCalendar();
-  renderEventList();
-  showToast('予定をすべて削除しました', 'success');
+  renderScheduleScreen();
+  renderScheduleTile();
+  renderTodoTile();
+  showToast('予定と TODO をすべて削除しました', 'success');
+});
+
+document.getElementById('btnAddTodo').addEventListener('click', addTodoFromInput);
+document.getElementById('inputTodoTitle').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addTodoFromInput(); }
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
