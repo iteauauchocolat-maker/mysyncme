@@ -4707,11 +4707,20 @@ function buildProfileSysPrompt(modeBlock) {
     '【カテゴリ一覧】\n' + catList + '\n\n' +
     '【ルール】\n' +
     '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
-    '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
+    '- スキーマ:\n' +
+    '  {\n' +
+    '    "name": "ユーザーの呼び方(任意)",\n' +
+    '    "birthday": "YYYY-MM-DD 形式の誕生日(任意、不明なら省略)",\n' +
+    '    "address": "ざっくりの住所(任意、市区町村レベルで可)",\n' +
+    '    "routes": ["通勤・通学路線の配列(任意、各要素は文字列)"],\n' +
+    '    "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... }\n' +
+    '  }\n' +
     '- 既存の項目は原則として残し、新情報を追加・更新する。\n' +
     '- 既存と矛盾する情報があれば新しい情報で上書きする。\n' +
     '- 重複する内容を作らない(同じ意味の項目は 1 つにまとめる)。\n' +
-    '- label は簡潔に、value はその内容。\n' +
+    '- name / birthday / address / routes はトップレベルの専用フィールドに入れる。details の中に重複させないこと。\n' +
+    '  「【基本情報】」「【通勤・通学路線】」見出し配下の内容は対応するトップレベルへ。\n' +
+    '- birthday は本人の誕生日の月日が分かれば YYYY-MM-DD で。年が不明なら 1900-MM-DD で構わない。\n' +
     '- 確実に読み取れる情報のみ追加(推測しない)。\n' +
     '- 値が空になる項目は出力しない。\n' +
     '- カテゴリに振り分けにくいものは other に入れる。';
@@ -4771,8 +4780,32 @@ async function callGeminiProfileMerge(parts, sys) {
       .filter(x => x.label || x.value);
   });
   profile.details = sanitized;
+
+  if (typeof parsed.name === 'string' && parsed.name.trim()) {
+    profile.name = parsed.name.trim();
+  }
+  if (typeof parsed.birthday === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(parsed.birthday.trim())) {
+    profile.birthday = parsed.birthday.trim();
+  }
+  if (typeof parsed.address === 'string' && parsed.address.trim()) {
+    profile.address = parsed.address.trim();
+  }
+  if (Array.isArray(parsed.routes)) {
+    const cleanedRoutes = parsed.routes
+      .map(r => (typeof r === 'string' ? r.trim() : ''))
+      .filter(Boolean);
+    if (cleanedRoutes.length > 0) {
+      const existing = Array.isArray(profile.routes) ? profile.routes.slice() : [];
+      cleanedRoutes.forEach(r => {
+        if (!existing.includes(r)) existing.push(r);
+      });
+      profile.routes = existing;
+    }
+  }
+
   saveProfile();
   renderProfileCategories();
+  renderProfileScreen();
   const after = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
   return after - before;
 }
@@ -4780,7 +4813,14 @@ async function callGeminiProfileMerge(parts, sys) {
 function existingProfileBlock() {
   const existing = {};
   PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
-  return '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n';
+  const block = {
+    name: profile.name || '',
+    birthday: profile.birthday || '',
+    address: profile.address || '',
+    routes: Array.isArray(profile.routes) ? profile.routes : [],
+    details: existing
+  };
+  return '【既存のプロフィール】\n' + JSON.stringify(block, null, 2) + '\n\n';
 }
 
 async function organizeProfileWithAI() {
