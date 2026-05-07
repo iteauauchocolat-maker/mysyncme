@@ -491,7 +491,7 @@ body.bg-cage .timestamp {
   height: 80px;
   background: linear-gradient(to bottom, rgba(255, 250, 240, 0) 0%, rgba(255, 250, 240, 0.7) 60%, rgba(255, 250, 240, 0.98) 100%);
   pointer-events: none;
-  z-index: 9;
+  z-index: 7;
 }
 @media (prefers-color-scheme: dark) {
   .bottom-fade {
@@ -863,7 +863,7 @@ body.bg-cage .timestamp {
   font-size: 14px;
 }
 .main-content {
-  padding: 24px 16px calc(60px + 8px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(60px + 70px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1059,9 +1059,14 @@ body.bg-cage .timestamp {
   gap: 10px;
 }
 .main-grid-apps {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(60px + env(safe-area-inset-bottom) + 10px);
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
+  z-index: 9;
 }
 
 .main-tile {
@@ -1136,6 +1141,7 @@ body.bg-cage .timestamp {
 .main-tile-icon-big { font-size: 44px; line-height: 1; margin: 6px 0; }
 .main-tile-stars-bottom { font-size: 13px; letter-spacing: 1px; line-height: 1; color: #E8A23A; }
 .train-tile .main-tile-body { font-size: 22px; font-weight: 700; align-items: center; gap: 2px; }
+.train-tile .main-tile-body.train-tile-text-small { font-size: 14px; font-weight: 600; color: var(--text-sub); }
 .train-tile .train-status { font-size: 22px; font-weight: 700; line-height: 1.15; }
 .train-tile .train-status.normal { color: #2A8455; }
 .train-tile .train-status.delay { color: #C0392B; }
@@ -4172,7 +4178,7 @@ function renderWeatherTile() {
   const p = document.getElementById('mainWeatherPrecip');
   if (!v) return;
   const setPrecip = (txt) => { if (p) p.textContent = txt || ''; };
-  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = ''; setPrecip(''); return; }
+  if (!profile.address) { v.textContent = '住所未設定'; v.style.fontSize = '13px'; setPrecip(''); return; }
   if (mainLoadingFlags.weather) { v.textContent = '…'; v.style.fontSize = ''; setPrecip(''); return; }
   const cache = readMainCache('weather');
   if (cache && !cache.error && cache.icon) {
@@ -4180,7 +4186,7 @@ function renderWeatherTile() {
     v.textContent = weatherEmoji(cache.icon);
     setPrecip(cache.precip ? '💧 ' + cache.precip : '');
   } else if (cache && cache.error) {
-    v.style.fontSize = '12px';
+    v.style.fontSize = '13px';
     v.textContent = '取得失敗';
     setPrecip('');
   } else {
@@ -4211,8 +4217,17 @@ function extractDelayedRoutes(detail) {
 function renderTrainTile() {
   const v = document.getElementById('mainTrainBody');
   if (!v) return;
-  if (!Array.isArray(profile.routes) || profile.routes.length === 0) { v.textContent = '路線未設定'; return; }
-  if (mainLoadingFlags.train) { v.textContent = '取得中…'; return; }
+  v.classList.remove('train-tile-text-small');
+  if (!Array.isArray(profile.routes) || profile.routes.length === 0) {
+    v.classList.add('train-tile-text-small');
+    v.textContent = '路線未設定';
+    return;
+  }
+  if (mainLoadingFlags.train) {
+    v.classList.add('train-tile-text-small');
+    v.textContent = '取得中…';
+    return;
+  }
   const cache = readMainCache('train');
   if (cache && !cache.error && cache.status) {
     if (cache.status === 'delay') {
@@ -4227,8 +4242,10 @@ function renderTrainTile() {
       v.innerHTML = '<div class="train-status normal">遅延なし</div>';
     }
   } else if (cache && cache.error) {
+    v.classList.add('train-tile-text-small');
     v.textContent = '取得失敗';
   } else {
+    v.classList.add('train-tile-text-small');
     v.textContent = '取得中…';
   }
 }
@@ -4237,8 +4254,15 @@ function renderFortuneTile() {
   const ic = document.getElementById('mainFortuneIcon');
   const st = document.getElementById('mainFortuneStars');
   if (!ic || !st) return;
-  if (!getZodiac(profile.birthday)) { ic.textContent = '?'; ic.style.fontSize = '20px'; st.textContent = '誕生日未設定'; return; }
+  if (!getZodiac(profile.birthday)) {
+    ic.textContent = '?';
+    ic.style.fontSize = '24px';
+    st.style.fontSize = '12px';
+    st.textContent = '誕生日未設定';
+    return;
+  }
   ic.style.fontSize = '';
+  st.style.fontSize = '';
   if (mainLoadingFlags.fortune) { ic.textContent = '…'; st.textContent = ''; return; }
   const cache = readMainCache('fortune');
   if (cache && !cache.error && cache.stars) {
@@ -4246,7 +4270,8 @@ function renderFortuneTile() {
     st.textContent = '★'.repeat(cache.stars) + '☆'.repeat(5 - cache.stars);
   } else if (cache && cache.error) {
     ic.textContent = '?';
-    ic.style.fontSize = '20px';
+    ic.style.fontSize = '24px';
+    st.style.fontSize = '12px';
     st.textContent = '取得失敗';
   } else {
     ic.textContent = '…';
