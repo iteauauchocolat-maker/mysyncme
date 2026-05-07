@@ -759,6 +759,36 @@ body.bg-cage .timestamp {
   .main-action-btn { background: #C7813F; }
   .main-action-btn.ext { background: #3A8AB8; }
 }
+
+.main-tile-icon { font-size: 22px; line-height: 1; }
+.main-tile-stars { font-size: 13px; letter-spacing: 1px; }
+.main-detail-content {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 55vh;
+  overflow-y: auto;
+  color: var(--text);
+}
+.main-detail-content .stars { color: #E8A23A; font-size: 18px; letter-spacing: 2px; }
+.main-detail-content h4 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--char-accent);
+}
+.main-detail-content h4:first-child { margin-top: 0; }
+.main-detail-content a {
+  color: var(--char-accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.main-detail-sources {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
 .cal-nav {
   display: flex;
   align-items: center;
@@ -1252,6 +1282,18 @@ body.bg-cage .timestamp {
   </div>
 </div>
 
+<div class="modal-overlay" id="mainDetailModal">
+  <div class="modal">
+    <h3 id="mainDetailTitle">詳細</h3>
+    <div id="mainDetailContent" class="main-detail-content"></div>
+    <div id="mainDetailSources" class="main-detail-sources"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnRefreshMainDetail">再取得</button>
+      <button class="btn" id="btnCloseMainDetail">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="delayModal">
   <div class="modal">
     <h3>運行状況</h3>
@@ -1614,6 +1656,9 @@ function switchScreen(name) {
   } else {
     document.body.classList.remove('bg-cage');
   }
+  if (name === 'main') {
+    refreshMainData(false);
+  }
 }
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
@@ -1621,14 +1666,23 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 document.getElementById('btnMainTalk').addEventListener('click', () => switchScreen('chat'));
 document.querySelectorAll('.fukidashi').forEach(el => {
-  el.addEventListener('click', () => switchScreen('chat'));
+  el.addEventListener('click', () => {
+    const idx = parseInt(el.dataset.fuki, 10) || 0;
+    handleFukidashiTap(idx);
+  });
 });
-document.getElementById('btnMainWeather').addEventListener('click', () => showToast('天気の詳細は準備中', 'info'));
-document.getElementById('btnMainTrain').addEventListener('click', () => showToast('鉄道の詳細は準備中', 'info'));
-document.getElementById('btnMainFortune').addEventListener('click', () => showToast('占いの詳細は準備中', 'info'));
+document.getElementById('btnMainWeather').addEventListener('click', showWeatherDetail);
+document.getElementById('btnMainTrain').addEventListener('click', showTrainDetail);
+document.getElementById('btnMainFortune').addEventListener('click', showFortuneDetail);
 document.getElementById('btnMainLine').addEventListener('click', () => { window.location.href = 'line://'; });
 document.getElementById('btnMainMail').addEventListener('click', () => { window.location.href = 'mailto:'; });
 document.getElementById('btnMainX').addEventListener('click', () => { window.open('https://x.com/', '_blank'); });
+
+document.getElementById('btnCloseMainDetail').addEventListener('click', closeMainDetailModal);
+document.getElementById('btnRefreshMainDetail').addEventListener('click', refreshCurrentDetail);
+document.getElementById('mainDetailModal').addEventListener('click', e => {
+  if (e.target.id === 'mainDetailModal') closeMainDetailModal();
+});
 
 function applyCharTheme(char) {
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -2227,6 +2281,552 @@ function renderMainScreen() {
     img.src = char.expressions.default;
     img.alt = char.name;
   }
+  renderFukidashiTiles();
+  renderWeatherTile();
+  renderTrainTile();
+  renderFortuneTile();
+}
+
+// ===== メイン画面: データ層 =====
+const MAIN_TTL = {
+  weather: 60 * 60 * 1000,
+  train: 10 * 60 * 1000,
+  fortune: 60 * 60 * 1000,
+  fukidashi: 10 * 60 * 1000
+};
+function mainCacheKey(name, ext) { return 'agent_main_' + name + (ext ? '_' + ext : ''); }
+function readMainCache(name, ext) {
+  try {
+    const raw = localStorage.getItem(mainCacheKey(name, ext));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+function writeMainCache(name, ext, data) {
+  try {
+    localStorage.setItem(mainCacheKey(name, ext), JSON.stringify({ ...data, ts: Date.now() }));
+  } catch (e) { console.error('main cache save failed', e); }
+}
+function isFresh(cache, ttl) {
+  return cache && cache.ts && (Date.now() - cache.ts < ttl);
+}
+
+const ZODIAC = [
+  { id: 'capricorn',   name: 'やぎ座',    emoji: '♑' },
+  { id: 'aquarius',    name: 'みずがめ座', emoji: '♒' },
+  { id: 'pisces',      name: 'うお座',    emoji: '♓' },
+  { id: 'aries',       name: 'おひつじ座', emoji: '♈' },
+  { id: 'taurus',      name: 'おうし座',  emoji: '♉' },
+  { id: 'gemini',      name: 'ふたご座',  emoji: '♊' },
+  { id: 'cancer',      name: 'かに座',    emoji: '♋' },
+  { id: 'leo',         name: 'しし座',    emoji: '♌' },
+  { id: 'virgo',       name: 'おとめ座',  emoji: '♍' },
+  { id: 'libra',       name: 'てんびん座', emoji: '♎' },
+  { id: 'scorpio',     name: 'さそり座',  emoji: '♏' },
+  { id: 'sagittarius', name: 'いて座',    emoji: '♐' }
+];
+function getZodiac(birthday) {
+  if (!birthday || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return null;
+  const md = birthday.slice(5);
+  const ranges = [
+    ['01-20', '02-18', 'aquarius'],
+    ['02-19', '03-20', 'pisces'],
+    ['03-21', '04-19', 'aries'],
+    ['04-20', '05-20', 'taurus'],
+    ['05-21', '06-21', 'gemini'],
+    ['06-22', '07-22', 'cancer'],
+    ['07-23', '08-22', 'leo'],
+    ['08-23', '09-22', 'virgo'],
+    ['09-23', '10-23', 'libra'],
+    ['10-24', '11-22', 'scorpio'],
+    ['11-23', '12-21', 'sagittarius']
+  ];
+  for (const r of ranges) if (md >= r[0] && md <= r[1]) return ZODIAC.find(z => z.id === r[2]);
+  return ZODIAC.find(z => z.id === 'capricorn');
+}
+
+async function callGeminiSimple(prompt, useSearch) {
+  if (!settings.apiKey) throw new Error('APIキーが設定されていません');
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + encodeURIComponent(settings.model)
+    + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+  const body = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+  };
+  if (useSearch) body.tools = [{ google_search: {} }];
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+    try {
+      const ed = await resp.json();
+      if (ed.error && ed.error.message) errMsg = ed.error.message;
+    } catch (e) {}
+    throw new Error(errMsg);
+  }
+  const data = await resp.json();
+  const cand = data.candidates && data.candidates[0];
+  if (!cand) throw new Error('AIから応答がありませんでした');
+  if (cand.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
+  const ps = cand.content && cand.content.parts;
+  const text = ps ? ps.map(p => p.text || '').join('').trim() : '';
+  if (!text) throw new Error('応答が空でした');
+  let sources = [];
+  const gm = cand.groundingMetadata;
+  if (gm && Array.isArray(gm.groundingChunks)) {
+    sources = gm.groundingChunks
+      .map(c => c.web && c.web.uri ? { title: c.web.title || c.web.uri, url: c.web.uri } : null)
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+  return { text, sources };
+}
+
+function parseJsonFromText(text) {
+  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = (m ? m[1] : text).trim();
+  return JSON.parse(body);
+}
+
+let mainLoadingFlags = { weather: false, train: false, fortune: false, fukidashi: false };
+
+async function loadWeather(force) {
+  if (!profile.address) return null;
+  const cache = readMainCache('weather');
+  if (!force && isFresh(cache, MAIN_TTL.weather) && cache.address === profile.address) return cache;
+  if (mainLoadingFlags.weather) return cache;
+  if (!settings.apiKey) return cache;
+  mainLoadingFlags.weather = true;
+  renderWeatherTile();
+  try {
+    const prompt =
+      '今日の' + profile.address + 'の天気予報を Web で検索して、以下の JSON のみ返してください:\n' +
+      '{\n' +
+      '  "icon": "晴/曇/雨/雪/雷 のいずれか1つ",\n' +
+      '  "precip": "今日の降水確率(% 表記、例: 30%)",\n' +
+      '  "summary": "今日の天気を一言(20文字以内)",\n' +
+      '  "detail": "今日と明日の天気・気温・降水確率・服装アドバイスを数行"\n' +
+      '}\n' +
+      'コードブロックや説明文は禁止。JSON のみ出力。';
+    const { text, sources } = await callGeminiSimple(prompt, true);
+    const obj = parseJsonFromText(text);
+    const data = {
+      address: profile.address,
+      icon: String(obj.icon || ''),
+      precip: String(obj.precip || ''),
+      summary: String(obj.summary || ''),
+      detail: String(obj.detail || ''),
+      sources: sources
+    };
+    writeMainCache('weather', null, data);
+    return { ...data, ts: Date.now() };
+  } catch (e) {
+    console.error('weather load failed', e);
+    const errData = { error: String(e.message || e), address: profile.address };
+    return errData;
+  } finally {
+    mainLoadingFlags.weather = false;
+    renderWeatherTile();
+  }
+}
+
+async function loadTrain(force) {
+  if (!Array.isArray(profile.routes) || profile.routes.length === 0) return null;
+  const cache = readMainCache('train');
+  if (!force && isFresh(cache, MAIN_TTL.train)) return cache;
+  if (mainLoadingFlags.train) return cache;
+  if (!settings.apiKey) return cache;
+  mainLoadingFlags.train = true;
+  renderTrainTile();
+  try {
+    const routes = profile.routes;
+    const prompt =
+      '以下の路線について、現在の運行状況(遅延・運休・通常運転)を Web で検索して教えてください。\n\n' +
+      '路線:\n' + routes.map(r => '- ' + r).join('\n') + '\n\n' +
+      '形式:\n' +
+      '- 各路線について「路線名: 状況」を 1 行ずつ\n' +
+      '- 状況の例: 通常運転 / 〇分遅れ / 運休 / 一部運休 など\n' +
+      '- 遅延・運休がある場合は、その路線の運行情報詳細ページの URL を同じ行末に含めてください\n' +
+      '- 通常運転の路線は URL 不要\n' +
+      '- 最後に「取得時刻: YYYY-MM-DD HH:MM」を入れる\n' +
+      '- 詳細な説明や前置きは不要';
+    const { text, sources } = await callGeminiSimple(prompt, true);
+    const status = /(運休|遅れ|遅延|見合わせ)/.test(text) ? 'delay' : 'normal';
+    const data = { status, detail: text, sources: sources };
+    writeMainCache('train', null, data);
+    return { ...data, ts: Date.now() };
+  } catch (e) {
+    console.error('train load failed', e);
+    return { error: String(e.message || e) };
+  } finally {
+    mainLoadingFlags.train = false;
+    renderTrainTile();
+  }
+}
+
+async function loadFortune(force) {
+  const zod = getZodiac(profile.birthday);
+  if (!zod) return null;
+  const today = todayStr();
+  const cache = readMainCache('fortune');
+  if (!force && cache && cache.date === today && cache.zodiac === zod.id) return cache;
+  if (mainLoadingFlags.fortune) return cache;
+  if (!settings.apiKey) return cache;
+  mainLoadingFlags.fortune = true;
+  renderFortuneTile();
+  try {
+    const prompt =
+      '今日(' + today + ')の' + zod.name + 'の運勢を生成してください。\n' +
+      '以下の JSON のみで返してください:\n' +
+      '{\n' +
+      '  "stars": 1〜5の整数(総合運),\n' +
+      '  "summary": "総合運の一言(20文字以内)",\n' +
+      '  "love": "恋愛運(1〜2行)",\n' +
+      '  "work": "仕事・学業運(1〜2行)",\n' +
+      '  "health": "健康運(1〜2行)",\n' +
+      '  "luckyItem": "ラッキーアイテム(短く)"\n' +
+      '}\n' +
+      'コードブロックや説明文は禁止。JSON のみ出力。';
+    const { text } = await callGeminiSimple(prompt, false);
+    const obj = parseJsonFromText(text);
+    const data = {
+      date: today,
+      zodiac: zod.id,
+      zodiacName: zod.name,
+      zodiacEmoji: zod.emoji,
+      stars: Math.max(1, Math.min(5, parseInt(obj.stars, 10) || 3)),
+      summary: String(obj.summary || ''),
+      love: String(obj.love || ''),
+      work: String(obj.work || ''),
+      health: String(obj.health || ''),
+      luckyItem: String(obj.luckyItem || '')
+    };
+    writeMainCache('fortune', null, data);
+    return { ...data, ts: Date.now() };
+  } catch (e) {
+    console.error('fortune load failed', e);
+    return { error: String(e.message || e) };
+  } finally {
+    mainLoadingFlags.fortune = false;
+    renderFortuneTile();
+  }
+}
+
+function buildFukidashiContextLines(weather, train, fortune) {
+  const today = new Date();
+  const limit = new Date(today);
+  limit.setDate(today.getDate() + 14);
+  const limitStr = limit.toISOString().slice(0, 10);
+  const todayS = todayStr();
+  const upcoming = (schedule.events || [])
+    .filter(e => e.date && e.date >= todayS && e.date <= limitStr)
+    .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))
+    .slice(0, 10);
+  const eventsLines = upcoming.length
+    ? upcoming.map(e => '- ' + e.date + (e.time ? ' ' + e.time : '') + ' ' + (e.title || '(無題)') + (e.memo ? ' / ' + e.memo : '')).join('\n')
+    : '(予定なし)';
+  const weatherLine = weather && !weather.error ? (weather.icon + ' ' + weather.summary + ' / 降水確率 ' + weather.precip) : '(なし)';
+  const trainLine = train && !train.error ? (train.status === 'delay' ? '遅延あり: ' + train.detail.slice(0, 200) : '遅延なし') : '(なし)';
+  const fortuneLine = fortune && !fortune.error ? (fortune.zodiacName + ' ★' + fortune.stars + ' ' + fortune.summary) : '(なし)';
+  return { eventsLines, weatherLine, trainLine, fortuneLine };
+}
+
+const FUKIDASHI_THEMES = [
+  'ユーザーのスケジュール(本日〜2週間先)に書かれた予定について話しかける。該当予定が無ければ趣味・興味の話題に切り替える。',
+  '今日の天気・電車の遅延・今日の運勢のいずれかに関連した話しかけ。',
+  'ユーザーの趣味・興味に関連する話題。該当が無ければランダムなちょっとした話題で。'
+];
+
+async function loadFukidashi(ctx, force) {
+  const charId = getActiveChar().id;
+  const cache = readMainCache('fukidashi', charId);
+  if (!force && isFresh(cache, MAIN_TTL.fukidashi)) return cache;
+  if (mainLoadingFlags.fukidashi) return cache;
+  if (!settings.apiKey) return cache;
+  mainLoadingFlags.fukidashi = true;
+  renderFukidashiTiles();
+  try {
+    const char = getActiveChar();
+    const { eventsLines, weatherLine, trainLine, fortuneLine } = buildFukidashiContextLines(
+      ctx && ctx.weather, ctx && ctx.train, ctx && ctx.fortune
+    );
+    const profileText = buildProfilePromptText();
+    const prompt =
+      'あなたはキャラクター「' + char.name + '」(' + char.species + '、' + char.personality + ')です。\n' +
+      'ユーザーへの短い話しかけセリフを 3 つ考えてください。\n\n' +
+      '【セリフのテーマ】\n' +
+      '1. ' + FUKIDASHI_THEMES[0] + '\n' +
+      '2. ' + FUKIDASHI_THEMES[1] + '\n' +
+      '3. ' + FUKIDASHI_THEMES[2] + '\n\n' +
+      '【スケジュール】\n' + eventsLines + '\n\n' +
+      '【今日の天気】' + weatherLine + '\n' +
+      '【鉄道遅延】' + trainLine + '\n' +
+      '【今日の運勢】' + fortuneLine + '\n\n' +
+      profileText + '\n' +
+      '【出力形式】JSON 配列のみ ["セリフ1","セリフ2","セリフ3"]\n' +
+      '- 各セリフは 30〜60 文字程度\n' +
+      '- キャラクターの口調を維持(タメ口・敬語などキャラに合わせる)\n' +
+      '- 説明文・コードブロック・前置きは禁止';
+    const { text } = await callGeminiSimple(prompt, false);
+    let arr;
+    try { arr = parseJsonFromText(text); } catch (e) { arr = null; }
+    if (!Array.isArray(arr) || arr.length < 3) throw new Error('フキダシの応答が不正');
+    const items = arr.slice(0, 3).map(s => ({ text: String(s || '').trim() }));
+    const data = { items };
+    writeMainCache('fukidashi', charId, data);
+    return { ...data, ts: Date.now() };
+  } catch (e) {
+    console.error('fukidashi load failed', e);
+    return { error: String(e.message || e) };
+  } finally {
+    mainLoadingFlags.fukidashi = false;
+    renderFukidashiTiles();
+  }
+}
+
+async function regenerateOneFukidashi(idx, ctx) {
+  const charId = getActiveChar().id;
+  const cache = readMainCache('fukidashi', charId) || { items: [{}, {}, {}] };
+  if (!settings.apiKey) return cache;
+  if (mainLoadingFlags.fukidashi) return cache;
+  mainLoadingFlags.fukidashi = true;
+  try {
+    const char = getActiveChar();
+    const { eventsLines, weatherLine, trainLine, fortuneLine } = buildFukidashiContextLines(
+      ctx && ctx.weather, ctx && ctx.train, ctx && ctx.fortune
+    );
+    const profileText = buildProfilePromptText();
+    const prompt =
+      'あなたはキャラクター「' + char.name + '」(' + char.species + '、' + char.personality + ')です。\n' +
+      '以下のテーマに基づいて、ユーザーへの短い話しかけセリフを 1 つだけ生成してください。\n\n' +
+      '【テーマ】' + FUKIDASHI_THEMES[idx] + '\n\n' +
+      '【スケジュール】\n' + eventsLines + '\n\n' +
+      '【今日の天気】' + weatherLine + '\n' +
+      '【鉄道遅延】' + trainLine + '\n' +
+      '【今日の運勢】' + fortuneLine + '\n\n' +
+      profileText + '\n' +
+      '【出力形式】セリフ 1 つを文字列でそのまま出力(JSON や引用符・前置き・コードブロックは禁止)。\n' +
+      '- 30〜60 文字程度\n' +
+      '- キャラクターの口調を維持';
+    const { text } = await callGeminiSimple(prompt, false);
+    const cleaned = text.trim().replace(/^["「『]|["」』]$/g, '');
+    const items = (cache.items && cache.items.length === 3) ? cache.items.slice() : [{}, {}, {}];
+    items[idx] = { text: cleaned };
+    const data = { items };
+    writeMainCache('fukidashi', charId, data);
+    return { ...data, ts: Date.now() };
+  } catch (e) {
+    console.error('fukidashi regen failed', e);
+    return cache;
+  } finally {
+    mainLoadingFlags.fukidashi = false;
+  }
+}
+
+// ===== Render =====
+function renderFukidashiTiles() {
+  const charId = getActiveChar().id;
+  const cache = readMainCache('fukidashi', charId);
+  const els = document.querySelectorAll('.fukidashi .fukidashi-text');
+  const items = (cache && cache.items) || [];
+  els.forEach((el, idx) => {
+    if (mainLoadingFlags.fukidashi && (!items[idx] || !items[idx].text)) {
+      el.textContent = '取得中…';
+    } else if (items[idx] && items[idx].text) {
+      el.textContent = items[idx].text;
+    } else if (!settings.apiKey) {
+      el.textContent = 'APIキーを設定してね';
+    } else {
+      el.textContent = '取得中…';
+    }
+  });
+}
+
+function renderWeatherTile() {
+  const v = document.getElementById('mainWeatherValue');
+  if (!v) return;
+  if (!profile.address) { v.textContent = '住所未設定'; return; }
+  if (mainLoadingFlags.weather) { v.textContent = '取得中…'; return; }
+  const cache = readMainCache('weather');
+  if (cache && !cache.error && cache.icon) {
+    v.innerHTML = '<span class="main-tile-icon">' + escapeHtml(cache.icon) + '</span> ' + escapeHtml(cache.precip || '');
+  } else if (cache && cache.error) {
+    v.textContent = '取得失敗';
+  } else {
+    v.textContent = '取得中…';
+  }
+}
+
+function renderTrainTile() {
+  const v = document.getElementById('mainTrainValue');
+  if (!v) return;
+  if (!Array.isArray(profile.routes) || profile.routes.length === 0) { v.textContent = '路線未設定'; return; }
+  if (mainLoadingFlags.train) { v.textContent = '取得中…'; return; }
+  const cache = readMainCache('train');
+  if (cache && !cache.error && cache.status) {
+    v.textContent = cache.status === 'delay' ? '遅延あり' : '遅延なし';
+  } else if (cache && cache.error) {
+    v.textContent = '取得失敗';
+  } else {
+    v.textContent = '取得中…';
+  }
+}
+
+function renderFortuneTile() {
+  const v = document.getElementById('mainFortuneValue');
+  if (!v) return;
+  if (!getZodiac(profile.birthday)) { v.textContent = '誕生日未設定'; return; }
+  if (mainLoadingFlags.fortune) { v.textContent = '取得中…'; return; }
+  const cache = readMainCache('fortune');
+  if (cache && !cache.error && cache.stars) {
+    const stars = '★'.repeat(cache.stars) + '☆'.repeat(5 - cache.stars);
+    v.innerHTML = '<span class="main-tile-icon">' + escapeHtml(cache.zodiacEmoji) + '</span> <span class="main-tile-stars">' + stars + '</span>';
+  } else if (cache && cache.error) {
+    v.textContent = '取得失敗';
+  } else {
+    v.textContent = '取得中…';
+  }
+}
+
+// ===== Refresh orchestration =====
+let mainRefreshInFlight = false;
+async function refreshMainData(force) {
+  if (mainRefreshInFlight) return;
+  if (!settings.apiKey) return;
+  mainRefreshInFlight = true;
+  try {
+    const [weather, train, fortune] = await Promise.all([
+      loadWeather(force),
+      loadTrain(force),
+      loadFortune(force)
+    ]);
+    await loadFukidashi({ weather, train, fortune }, force);
+    renderFukidashiTiles();
+  } finally {
+    mainRefreshInFlight = false;
+  }
+}
+
+// ===== Detail modal =====
+let mainDetailKind = null;
+function escapeHtmlAttr(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function renderSourcesHtml(sources) {
+  if (!Array.isArray(sources) || sources.length === 0) return '';
+  return '参考: ' + sources.slice(0, 5).map(s =>
+    '<a href="' + escapeHtmlAttr(s.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtmlAttr(s.title) + '</a>'
+  ).join(' / ');
+}
+function showWeatherDetail() {
+  if (!profile.address) {
+    showToast('プロフィールで住所を入れてね', 'error');
+    return;
+  }
+  mainDetailKind = 'weather';
+  const cache = readMainCache('weather');
+  document.getElementById('mainDetailTitle').textContent = '今日の天気 — ' + (cache && cache.address || profile.address);
+  const c = document.getElementById('mainDetailContent');
+  if (!cache || cache.error) {
+    c.textContent = mainLoadingFlags.weather ? '取得中…' : '取得に失敗しました\n再取得を試してください';
+  } else {
+    c.innerHTML = '<h4>' + escapeHtmlAttr(cache.icon) + ' ' + escapeHtmlAttr(cache.summary) + '</h4>' +
+      '<div>降水確率: ' + escapeHtmlAttr(cache.precip) + '</div>' +
+      '<h4>詳細</h4>' +
+      '<div>' + escapeHtmlAttr(cache.detail).replace(/\n/g, '<br>') + '</div>';
+  }
+  document.getElementById('mainDetailSources').innerHTML = renderSourcesHtml(cache && cache.sources);
+  document.getElementById('mainDetailModal').classList.add('show');
+}
+function showTrainDetail() {
+  if (!Array.isArray(profile.routes) || profile.routes.length === 0) {
+    showToast('プロフィールで路線を登録してね', 'error');
+    return;
+  }
+  mainDetailKind = 'train';
+  const cache = readMainCache('train');
+  document.getElementById('mainDetailTitle').textContent = '運行状況';
+  const c = document.getElementById('mainDetailContent');
+  if (!cache || cache.error) {
+    c.textContent = mainLoadingFlags.train ? '取得中…' : '取得に失敗しました\n再取得を試してください';
+  } else {
+    c.innerHTML = linkifyDelayText(cache.detail || '');
+  }
+  document.getElementById('mainDetailSources').innerHTML = renderSourcesHtml(cache && cache.sources);
+  document.getElementById('mainDetailModal').classList.add('show');
+}
+function showFortuneDetail() {
+  if (!getZodiac(profile.birthday)) {
+    showToast('プロフィールで誕生日を入れてね', 'error');
+    return;
+  }
+  mainDetailKind = 'fortune';
+  const cache = readMainCache('fortune');
+  document.getElementById('mainDetailTitle').textContent = '今日の運勢';
+  const c = document.getElementById('mainDetailContent');
+  if (!cache || cache.error) {
+    c.textContent = mainLoadingFlags.fortune ? '取得中…' : '取得に失敗しました\n再取得を試してください';
+  } else {
+    const stars = '★'.repeat(cache.stars) + '☆'.repeat(5 - cache.stars);
+    c.innerHTML =
+      '<h4>' + escapeHtmlAttr(cache.zodiacEmoji + ' ' + cache.zodiacName) + '</h4>' +
+      '<div class="stars">' + stars + '</div>' +
+      '<div>' + escapeHtmlAttr(cache.summary) + '</div>' +
+      '<h4>恋愛運</h4><div>' + escapeHtmlAttr(cache.love) + '</div>' +
+      '<h4>仕事・学業運</h4><div>' + escapeHtmlAttr(cache.work) + '</div>' +
+      '<h4>健康運</h4><div>' + escapeHtmlAttr(cache.health) + '</div>' +
+      '<h4>ラッキーアイテム</h4><div>' + escapeHtmlAttr(cache.luckyItem) + '</div>';
+  }
+  document.getElementById('mainDetailSources').innerHTML = '';
+  document.getElementById('mainDetailModal').classList.add('show');
+}
+function closeMainDetailModal() {
+  document.getElementById('mainDetailModal').classList.remove('show');
+}
+async function refreshCurrentDetail() {
+  if (!mainDetailKind) return;
+  if (mainDetailKind === 'weather') { await loadWeather(true); showWeatherDetail(); }
+  else if (mainDetailKind === 'train') { await loadTrain(true); showTrainDetail(); }
+  else if (mainDetailKind === 'fortune') { await loadFortune(true); showFortuneDetail(); }
+}
+
+// ===== Fukidashi tap =====
+async function handleFukidashiTap(idx) {
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してね', 'error');
+    switchScreen('settings');
+    return;
+  }
+  const charId = getActiveChar().id;
+  const cache = readMainCache('fukidashi', charId);
+  const item = cache && cache.items && cache.items[idx];
+  if (!item || !item.text) {
+    switchScreen('chat');
+    return;
+  }
+  const { emotion, cleanText } = extractEmotion(item.text);
+  chatHistory.push({
+    role: 'ai',
+    content: cleanText,
+    emotion: emotion || null,
+    timestamp: new Date().toISOString()
+  });
+  saveChatHistory();
+  renderChat();
+  switchScreen('chat');
+  if (emotion) setCharExpression(emotion);
+  setTimeout(scrollChatToBottom, 50);
+  // バックグラウンドでそのフキダシだけ再生成
+  const ctx = {
+    weather: readMainCache('weather'),
+    train: readMainCache('train'),
+    fortune: readMainCache('fortune')
+  };
+  regenerateOneFukidashi(idx, ctx).then(() => renderFukidashiTiles());
 }
 
 function renderRouteChips() {
@@ -3135,6 +3735,8 @@ function init() {
   document.body.classList.add('bg-cage');
   if (!settings.apiKey) {
     setTimeout(() => switchScreen('settings'), 100);
+  } else {
+    refreshMainData(false);
   }
 }
 
