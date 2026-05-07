@@ -803,6 +803,16 @@ body.bg-cage .timestamp {
   cursor: pointer;
 }
 .route-add-btn:active { opacity: 0.85; }
+.delay-detail-link {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--char-accent);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.delay-detail-link:active { opacity: 0.7; }
 .modal-actions {
   display: flex;
   gap: 8px;
@@ -2009,6 +2019,19 @@ function addRouteFromInput() {
   showToast('追加しました', 'success');
 }
 
+function linkifyDelayText(raw) {
+  // HTML エスケープしてから URL を「詳細を見る」リンクに変換
+  const esc = raw.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+  return esc.replace(/(https?:\/\/[^\s<>"'\)\]、。]+)/g, (m, url) => {
+    let host = '';
+    try { host = new URL(url).hostname.replace(/^www\./, ''); } catch (e) {}
+    const label = host ? '詳細を見る (' + host + ')' : '詳細を見る';
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="delay-detail-link">' + label + '</a>';
+  });
+}
+
 let isCheckingDelay = false;
 async function checkRouteDelays() {
   if (isCheckingDelay) return;
@@ -2038,7 +2061,9 @@ async function checkRouteDelays() {
       '形式:\n' +
       '- 各路線について「路線名: 状況」を 1 行ずつ\n' +
       '- 状況の例: 通常運転 / 〇分遅れ / 運休 / 一部運休 など\n' +
-      '- 遅延・運休があれば理由を 1 行で簡潔に補足\n' +
+      '- 遅延・運休がある場合は、その路線の運行情報詳細ページの URL を同じ行末に含めてください(Yahoo路線情報、鉄道会社公式の運行情報ページなど)\n' +
+      '- 例: JR中央・総武線: 5分遅れ(信号トラブル) https://transit.yahoo.co.jp/diainfo/22/0\n' +
+      '- 通常運転の路線は URL 不要\n' +
       '- 最後に「取得時刻: YYYY-MM-DD HH:MM」を入れる\n' +
       '- 詳細な説明や前置きは不要';
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
@@ -2068,7 +2093,7 @@ async function checkRouteDelays() {
     const ps = cand.content && cand.content.parts;
     const raw = ps ? ps.map(p => p.text || '').join('').trim() : '';
     if (!raw) throw new Error('応答が空でした');
-    document.getElementById('delayContent').textContent = raw;
+    document.getElementById('delayContent').innerHTML = linkifyDelayText(raw);
     // 引用元(あれば)を表示
     const gm = cand.groundingMetadata;
     if (gm && Array.isArray(gm.groundingChunks)) {
