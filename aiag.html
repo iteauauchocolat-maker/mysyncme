@@ -602,6 +602,157 @@ body.bg-cage .timestamp {
 }
 .profile-content { padding: 16px 16px calc(60px + 16px + env(safe-area-inset-bottom)); }
 .schedule-content { padding: 16px 16px calc(60px + 16px + env(safe-area-inset-bottom)); }
+.main-content {
+  padding: 14px 16px calc(60px + 16px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.main-logo {
+  background: linear-gradient(135deg, var(--char-accent), var(--char-bubble));
+  color: #fff;
+  border-radius: 14px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.main-logo img { max-height: 56px; max-width: 100%; display: block; }
+.main-logo-text { line-height: 1.2; }
+
+.main-fukidashi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.fukidashi {
+  position: relative;
+  background: var(--char-accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 8px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.1s, transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  word-break: break-word;
+}
+.fukidashi::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 22px;
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--char-accent);
+}
+.fukidashi:active { opacity: 0.8; transform: scale(0.97); }
+.fukidashi-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.main-character-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+.main-character-img {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--char-bubble);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.main-character-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.main-talk-btn {
+  position: relative;
+  background: var(--char-accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 16px 14px;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+  transition: opacity 0.1s, transform 0.1s;
+}
+.main-talk-btn::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid var(--char-accent);
+}
+.main-talk-btn:active { opacity: 0.9; transform: scale(0.99); }
+
+.main-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.main-action-btn {
+  aspect-ratio: 1.15;
+  border: none;
+  border-radius: 14px;
+  background: #E89A5C;
+  color: #fff;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transition: opacity 0.1s, transform 0.1s;
+}
+.main-action-btn:active { opacity: 0.85; transform: scale(0.97); }
+.main-action-label { font-size: 16px; }
+.main-action-value { font-size: 12px; opacity: 0.95; font-weight: 500; min-height: 14px; }
+.main-action-btn.ext {
+  background: #4FA8D8;
+  aspect-ratio: 1.6;
+}
+.main-action-btn.ext .main-action-label { font-size: 16px; }
+
+@media (prefers-color-scheme: dark) {
+  .main-action-btn { background: #C7813F; }
+  .main-action-btn.ext { background: #3A8AB8; }
+}
 .cal-nav {
   display: flex;
   align-items: center;
@@ -839,7 +990,50 @@ body.bg-cage .timestamp {
 
 <div id="app">
 
-  <div id="screen-chat" class="screen active">
+  <div id="screen-main" class="screen active">
+    <div class="main-content">
+      <div class="main-logo" id="mainLogo">
+        <img id="mainLogoImg" src="images/logo.png" alt="" onload="document.getElementById('mainLogoText').hidden=true" onerror="this.remove()">
+        <span class="main-logo-text" id="mainLogoText">mysyncme</span>
+      </div>
+
+      <div class="main-fukidashi-row">
+        <button class="fukidashi" data-fuki="0" type="button"><span class="fukidashi-text">準備中…</span></button>
+        <button class="fukidashi" data-fuki="1" type="button"><span class="fukidashi-text">準備中…</span></button>
+        <button class="fukidashi" data-fuki="2" type="button"><span class="fukidashi-text">準備中…</span></button>
+      </div>
+
+      <div class="main-character-row">
+        <div class="main-character-img">
+          <img id="mainCharImg" src="" alt="">
+        </div>
+        <button class="main-talk-btn" id="btnMainTalk" type="button">会話する</button>
+      </div>
+
+      <div class="main-action-grid">
+        <button class="main-action-btn act-weather" id="btnMainWeather" type="button">
+          <span class="main-action-label">天気</span>
+          <span class="main-action-value" id="mainWeatherValue">取得中…</span>
+        </button>
+        <button class="main-action-btn act-train" id="btnMainTrain" type="button">
+          <span class="main-action-label">鉄道</span>
+          <span class="main-action-value" id="mainTrainValue">取得中…</span>
+        </button>
+        <button class="main-action-btn act-fortune" id="btnMainFortune" type="button">
+          <span class="main-action-label">占い</span>
+          <span class="main-action-value" id="mainFortuneValue">取得中…</span>
+        </button>
+      </div>
+
+      <div class="main-action-grid">
+        <button class="main-action-btn ext" id="btnMainLine" type="button"><span class="main-action-label">LINE</span></button>
+        <button class="main-action-btn ext" id="btnMainMail" type="button"><span class="main-action-label">メール</span></button>
+        <button class="main-action-btn ext" id="btnMainX" type="button"><span class="main-action-label">X</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-chat" class="screen">
     <div class="chat-top">
       <div class="header">
         <button class="header-btn" id="btnOpenCharSelect">
@@ -865,14 +1059,24 @@ body.bg-cage .timestamp {
     <div class="profile-content">
 
       <div class="section">
-        <h3>呼び方</h3>
+        <h3>基本情報</h3>
         <div class="field">
           <label>キャラに呼んでほしい名前</label>
           <input type="text" id="inputProfileName" placeholder="例: たろう、ママ、ゆうちゃん">
           <div class="hint">空欄なら「あなた」と呼ばれます。</div>
           <div class="profile-name-preview" id="profileNamePreview"></div>
         </div>
-        <button class="btn btn-secondary" id="btnSaveProfileName">呼び方を保存</button>
+        <div class="field">
+          <label>誕生日</label>
+          <input type="date" id="inputProfileBirthday">
+          <div class="hint">星座占いに使います。</div>
+        </div>
+        <div class="field">
+          <label>自宅の住所(おおまかでOK)</label>
+          <input type="text" id="inputProfileAddress" placeholder="例: 東京都新宿区">
+          <div class="hint">天気予報の地域判定に使います。市区町村レベルで十分です。</div>
+        </div>
+        <button class="btn btn-secondary" id="btnSaveProfileName">基本情報を保存</button>
       </div>
 
       <div class="section">
@@ -1010,7 +1214,11 @@ body.bg-cage .timestamp {
   </div>
 
   <nav class="tabbar">
-    <button class="tab active" data-screen="chat">
+    <button class="tab active" data-screen="main">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6H11v6H6v-9H3z"/></svg>
+      <span>メイン</span>
+    </button>
+    <button class="tab" data-screen="chat">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
       <span>チャット</span>
     </button>
@@ -1237,6 +1445,8 @@ const PROFILE_CATEGORIES = [
 
 const DEFAULT_PROFILE = {
   name: '',
+  birthday: '',
+  address: '',
   freeText: '',
   details: {},
   routes: [],
@@ -1295,6 +1505,8 @@ function loadProfile() {
     const p = JSON.parse(raw);
     return {
       name: typeof p.name === 'string' ? p.name : '',
+      birthday: typeof p.birthday === 'string' ? p.birthday : '',
+      address: typeof p.address === 'string' ? p.address : '',
       freeText: typeof p.freeText === 'string' ? p.freeText : '',
       details: p.details && typeof p.details === 'object' ? p.details : {},
       routes: Array.isArray(p.routes) ? p.routes.filter(r => typeof r === 'string' && r.trim()) : [],
@@ -1397,6 +1609,17 @@ function switchScreen(name) {
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
 });
+
+document.getElementById('btnMainTalk').addEventListener('click', () => switchScreen('chat'));
+document.querySelectorAll('.fukidashi').forEach(el => {
+  el.addEventListener('click', () => switchScreen('chat'));
+});
+document.getElementById('btnMainWeather').addEventListener('click', () => showToast('天気の詳細は準備中', 'info'));
+document.getElementById('btnMainTrain').addEventListener('click', () => showToast('鉄道の詳細は準備中', 'info'));
+document.getElementById('btnMainFortune').addEventListener('click', () => showToast('占いの詳細は準備中', 'info'));
+document.getElementById('btnMainLine').addEventListener('click', () => { window.location.href = 'line://'; });
+document.getElementById('btnMainMail').addEventListener('click', () => { window.location.href = 'mailto:'; });
+document.getElementById('btnMainX').addEventListener('click', () => { window.open('https://x.com/', '_blank'); });
 
 function applyCharTheme(char) {
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1835,6 +2058,7 @@ function selectCharacter(charId) {
   applyCharTheme(getActiveChar());
   updateCharDisplay();
   renderChat();
+  renderMainScreen();
   setTimeout(scrollChatToBottom, 100);
   showToast(getActiveChar().name + 'に切り替えたよ', 'success');
 }
@@ -1979,10 +2203,21 @@ function renderProfileCategories() {
 
 function renderProfileScreen() {
   document.getElementById('inputProfileName').value = profile.name || '';
+  document.getElementById('inputProfileBirthday').value = profile.birthday || '';
+  document.getElementById('inputProfileAddress').value = profile.address || '';
   document.getElementById('inputProfileFreeText').value = profile.freeText || '';
   renderProfileNamePreview();
   renderRouteChips();
   renderProfileCategories();
+}
+
+function renderMainScreen() {
+  const char = getActiveChar();
+  const img = document.getElementById('mainCharImg');
+  if (img) {
+    img.src = char.expressions.default;
+    img.alt = char.name;
+  }
 }
 
 function renderRouteChips() {
@@ -2778,9 +3013,11 @@ async function addScheduleByImage(file) {
 
 document.getElementById('btnSaveProfileName').addEventListener('click', () => {
   profile.name = document.getElementById('inputProfileName').value.trim();
+  profile.birthday = document.getElementById('inputProfileBirthday').value || '';
+  profile.address = document.getElementById('inputProfileAddress').value.trim();
   saveProfile();
   renderProfileNamePreview();
-  showToast('呼び方を保存したよ', 'success');
+  showToast('基本情報を保存したよ', 'success');
 });
 
 document.getElementById('inputProfileFreeText').addEventListener('blur', () => {
@@ -2806,7 +3043,7 @@ document.getElementById('inputProfileImage').addEventListener('change', e => {
 document.getElementById('btnProfileGeoUpload').addEventListener('click', readProfileFromGeolocation);
 
 document.getElementById('btnResetProfile').addEventListener('click', () => {
-  if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目・路線)をすべて削除しますか?')) return;
+  if (!confirm('プロフィール(基本情報・自由記述・全カテゴリの項目・路線)をすべて削除しますか?')) return;
   profile = { ...DEFAULT_PROFILE, details: {}, routes: [] };
   saveProfile();
   renderProfileScreen();
@@ -2882,10 +3119,10 @@ function init() {
   applyCharTheme(getActiveChar());
   updateCharDisplay();
   renderChat();
+  renderMainScreen();
   renderProfileScreen();
   renderScheduleScreen();
   updateApiWarning();
-  document.body.classList.add('bg-cage');
   if (!settings.apiKey) {
     setTimeout(() => switchScreen('settings'), 100);
   }
