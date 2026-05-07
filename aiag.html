@@ -493,6 +493,86 @@ body {
   background: var(--card);
   border-radius: 50%;
 }
+.profile-content { padding: 16px; }
+.profile-cat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+}
+.profile-cat-head h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.profile-cat-add {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--char-accent);
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.profile-cat-add:active { background: var(--border); }
+.profile-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.profile-item:first-child { border-top: none; }
+.profile-item-body {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.profile-item-label {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+}
+.profile-item-value {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.45;
+  word-wrap: break-word;
+}
+.profile-item-del {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-sub);
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.profile-item-del:active { color: var(--error); }
+.profile-empty {
+  font-size: 13px;
+  color: var(--text-sub);
+  padding: 4px 0;
+}
+.profile-name-preview {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.profile-name-preview b { color: var(--char-accent); font-weight: 600; }
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.modal-actions .btn { flex: 1; }
+.modal .field { margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -524,9 +604,35 @@ body {
 
   <div id="screen-profile" class="screen">
     <div class="header"><div class="header-title">プロフィール</div></div>
-    <div class="placeholder">
-      <h2>準備中</h2>
-      <p>次のステップで実装予定です。<br>まずはキャラクターと話してみてください。</p>
+    <div class="profile-content">
+
+      <div class="section">
+        <h3>呼び方</h3>
+        <div class="field">
+          <label>キャラに呼んでほしい名前</label>
+          <input type="text" id="inputProfileName" placeholder="例: たろう、ママ、ゆうちゃん">
+          <div class="hint">空欄なら「あなた」と呼ばれます。</div>
+          <div class="profile-name-preview" id="profileNamePreview"></div>
+        </div>
+        <button class="btn btn-secondary" id="btnSaveProfileName">呼び方を保存</button>
+      </div>
+
+      <div class="section">
+        <h3>自由記述メモ</h3>
+        <div class="field">
+          <label>あなたについて、自由に書いてみよう</label>
+          <textarea id="inputProfileFreeText" rows="6" placeholder="例: 小学3年生の男の子。サッカーと恐竜が大好き。妹がひとりいる。早起きが苦手で…"></textarea>
+          <div class="hint">下のボタンを押すと、AI が内容を読み取って下の各カテゴリに自動で振り分けます。書いた内容は保存されます。</div>
+        </div>
+        <button class="btn" id="btnOrganizeProfile">AI に整理してもらう</button>
+      </div>
+
+      <div id="profileCategories"></div>
+
+      <div class="section">
+        <button class="btn btn-secondary" id="btnResetProfile">プロフィールをすべて削除</button>
+      </div>
+
     </div>
   </div>
 
@@ -601,6 +707,24 @@ body {
     <h3>キャラクター選択</h3>
     <div id="charCardList"></div>
     <button class="btn btn-secondary" id="btnCloseCharSelect" style="margin-top:8px;">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="profileItemModal">
+  <div class="modal">
+    <h3 id="profileItemModalTitle">項目を追加</h3>
+    <div class="field">
+      <label>項目名(ラベル)</label>
+      <input type="text" id="inputProfileItemLabel" placeholder="例: 職業、好きな食べ物">
+    </div>
+    <div class="field">
+      <label>内容</label>
+      <textarea id="inputProfileItemValue" rows="3" placeholder="例: エンジニア、いちご"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancelProfileItem">キャンセル</button>
+      <button class="btn" id="btnSaveProfileItem">保存</button>
+    </div>
   </div>
 </div>
 
@@ -706,14 +830,36 @@ const CHARACTERS = [
 const STORAGE_KEYS = {
   settings: 'agent_settings',
   activeChar: 'agent_active_char',
-  chatPrefix: 'agent_chat_'
+  chatPrefix: 'agent_chat_',
+  profile: 'agent_profile'
 };
 const DEFAULT_SETTINGS = { apiKey: '', model: 'gemini-2.5-flash' };
 
+const PROFILE_CATEGORIES = [
+  { id: 'basic',         name: '基本情報',         hint: '年齢、性別、職業、家族構成など' },
+  { id: 'location',      name: '地域・場所',        hint: '住んでいる地域、出身、よく行く場所など' },
+  { id: 'values',        name: '価値観・性格',      hint: '大事にしていること、性格の特徴' },
+  { id: 'interests',     name: '趣味・興味',        hint: '好きなこと、ハマっていること' },
+  { id: 'lifestyle',     name: 'ライフスタイル・行動特性', hint: '朝型・夜型、習慣、よくする行動' },
+  { id: 'relationships', name: '関係性',           hint: '家族、友人、ペット、大切な人' },
+  { id: 'goals',         name: '目標・夢',         hint: 'やりたいこと、なりたい姿' },
+  { id: 'other',         name: 'その他',           hint: 'その他のメモ' }
+];
+
+const DEFAULT_PROFILE = {
+  name: '',
+  freeText: '',
+  details: {},
+  updatedAt: ''
+};
+
 let settings = loadSettings();
+let profile = loadProfile();
 let activeCharId = localStorage.getItem(STORAGE_KEYS.activeChar) || CHARACTERS[0].id;
 let chatHistory = loadChatHistory(activeCharId);
 let isWaitingResponse = false;
+let isOrganizingProfile = false;
+let editingProfileItem = null;
 
 function getActiveChar() {
   return CHARACTERS.find(c => c.id === activeCharId) || CHARACTERS[0];
@@ -740,6 +886,37 @@ function loadChatHistory(charId) {
 }
 function saveChatHistory() {
   localStorage.setItem(chatKey(activeCharId), JSON.stringify(chatHistory));
+}
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.profile);
+    if (!raw) return { ...DEFAULT_PROFILE, details: {} };
+    const p = JSON.parse(raw);
+    return {
+      name: typeof p.name === 'string' ? p.name : '',
+      freeText: typeof p.freeText === 'string' ? p.freeText : '',
+      details: p.details && typeof p.details === 'object' ? p.details : {},
+      updatedAt: p.updatedAt || ''
+    };
+  } catch (e) {
+    return { ...DEFAULT_PROFILE, details: {} };
+  }
+}
+function saveProfile() {
+  profile.updatedAt = new Date().toISOString();
+  localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(profile));
+}
+function profileItems(catId) {
+  const arr = profile.details && profile.details[catId];
+  return Array.isArray(arr) ? arr : [];
+}
+function setProfileItems(catId, arr) {
+  if (!profile.details) profile.details = {};
+  profile.details[catId] = arr;
+}
+function hasAnyProfileDetail() {
+  return PROFILE_CATEGORIES.some(c => profileItems(c.id).length > 0);
 }
 
 function showToast(message, type = '') {
@@ -910,10 +1087,11 @@ async function callGemini(userMessage) {
     parts: [{ text: userMessage }]
   });
 
+  const systemText = char.systemPrompt + buildProfilePromptText();
   const body = {
     contents: contents,
     generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
-    systemInstruction: { parts: [{ text: char.systemPrompt }] }
+    systemInstruction: { parts: [{ text: systemText }] }
   };
 
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
@@ -1102,6 +1280,300 @@ function updateApiWarning() {
   document.getElementById('apiWarning').style.display = settings.apiKey ? 'none' : 'block';
 }
 
+function renderProfileNamePreview() {
+  const el = document.getElementById('profileNamePreview');
+  if (!el) return;
+  const n = (profile.name || '').trim();
+  el.innerHTML = n
+    ? '今は <b>' + escapeHtml(n) + '</b> と呼ばれます'
+    : '今は <b>あなた</b> と呼ばれます';
+}
+
+function renderProfileCategories() {
+  const root = document.getElementById('profileCategories');
+  if (!root) return;
+  root.innerHTML = '';
+  PROFILE_CATEGORIES.forEach(cat => {
+    const items = profileItems(cat.id);
+    const sec = document.createElement('div');
+    sec.className = 'section';
+
+    const head = document.createElement('div');
+    head.className = 'profile-cat-head';
+    head.innerHTML = '<h3>' + escapeHtml(cat.name) + '</h3>';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'profile-cat-add';
+    addBtn.type = 'button';
+    addBtn.textContent = '+ 追加';
+    addBtn.addEventListener('click', () => openProfileItemModal(cat.id, null));
+    head.appendChild(addBtn);
+    sec.appendChild(head);
+
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'profile-empty';
+      empty.textContent = cat.hint;
+      sec.appendChild(empty);
+    } else {
+      items.forEach((it, idx) => {
+        const row = document.createElement('div');
+        row.className = 'profile-item';
+
+        const body = document.createElement('div');
+        body.className = 'profile-item-body';
+        const lbl = document.createElement('div');
+        lbl.className = 'profile-item-label';
+        lbl.textContent = it.label || '(無題)';
+        const val = document.createElement('div');
+        val.className = 'profile-item-value';
+        val.textContent = it.value || '';
+        body.appendChild(lbl);
+        body.appendChild(val);
+        body.addEventListener('click', () => openProfileItemModal(cat.id, idx));
+
+        const del = document.createElement('button');
+        del.className = 'profile-item-del';
+        del.type = 'button';
+        del.setAttribute('aria-label', '削除');
+        del.textContent = '×';
+        del.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!confirm('この項目を削除しますか?\n\n' + (it.label || '') + ': ' + (it.value || ''))) return;
+          const arr = profileItems(cat.id).slice();
+          arr.splice(idx, 1);
+          setProfileItems(cat.id, arr);
+          saveProfile();
+          renderProfileCategories();
+        });
+
+        row.appendChild(body);
+        row.appendChild(del);
+        sec.appendChild(row);
+      });
+    }
+    root.appendChild(sec);
+  });
+}
+
+function renderProfileScreen() {
+  document.getElementById('inputProfileName').value = profile.name || '';
+  document.getElementById('inputProfileFreeText').value = profile.freeText || '';
+  renderProfileNamePreview();
+  renderProfileCategories();
+}
+
+function openProfileItemModal(catId, index) {
+  editingProfileItem = { catId, index };
+  const cat = PROFILE_CATEGORIES.find(c => c.id === catId);
+  const isEdit = index !== null && index !== undefined;
+  const item = isEdit ? profileItems(catId)[index] : null;
+  document.getElementById('profileItemModalTitle').textContent =
+    (cat ? cat.name : '項目') + (isEdit ? ' を編集' : ' に追加');
+  document.getElementById('inputProfileItemLabel').value = item ? (item.label || '') : '';
+  document.getElementById('inputProfileItemValue').value = item ? (item.value || '') : '';
+  document.getElementById('profileItemModal').classList.add('show');
+  setTimeout(() => document.getElementById('inputProfileItemLabel').focus(), 100);
+}
+function closeProfileItemModal() {
+  document.getElementById('profileItemModal').classList.remove('show');
+  editingProfileItem = null;
+}
+function saveProfileItemFromModal() {
+  if (!editingProfileItem) return;
+  const label = document.getElementById('inputProfileItemLabel').value.trim();
+  const value = document.getElementById('inputProfileItemValue').value.trim();
+  if (!label && !value) {
+    closeProfileItemModal();
+    return;
+  }
+  const { catId, index } = editingProfileItem;
+  const arr = profileItems(catId).slice();
+  const entry = { label, value };
+  if (index === null || index === undefined) {
+    arr.push(entry);
+  } else {
+    arr[index] = entry;
+  }
+  setProfileItems(catId, arr);
+  saveProfile();
+  renderProfileCategories();
+  closeProfileItemModal();
+  showToast('保存しました', 'success');
+}
+
+function buildProfilePromptText() {
+  const parts = [];
+  const n = (profile.name || '').trim();
+  if (n) parts.push('ユーザーのことは「' + n + '」と呼んでください。');
+  if (hasAnyProfileDetail()) {
+    const lines = ['【ユーザーについて知っていること】'];
+    PROFILE_CATEGORIES.forEach(cat => {
+      const items = profileItems(cat.id);
+      if (items.length === 0) return;
+      lines.push('■ ' + cat.name);
+      items.forEach(it => {
+        const lbl = (it.label || '').trim();
+        const val = (it.value || '').trim();
+        if (!lbl && !val) return;
+        lines.push('- ' + (lbl ? lbl + ': ' : '') + val);
+      });
+    });
+    parts.push(lines.join('\n'));
+  }
+  if (parts.length === 0) return '';
+  parts.push('この情報は会話の中で自然に活かしてください。毎回引用したり、長々と確認したりはしないでください。');
+  return '\n\n' + parts.join('\n\n');
+}
+
+async function organizeProfileWithAI() {
+  if (isOrganizingProfile) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  const freeText = document.getElementById('inputProfileFreeText').value.trim();
+  if (!freeText) {
+    showToast('自由記述に何か書いてから押してね', 'error');
+    return;
+  }
+  // 入力中の name も保存しておく
+  profile.name = document.getElementById('inputProfileName').value.trim();
+  profile.freeText = freeText;
+  saveProfile();
+
+  const btn = document.getElementById('btnOrganizeProfile');
+  isOrganizingProfile = true;
+  const origLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '整理中...';
+
+  const catList = PROFILE_CATEGORIES.map(c => '- ' + c.id + ' (' + c.name + '): ' + c.hint).join('\n');
+  const existing = {};
+  PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
+
+  const sys =
+    'あなたはユーザープロフィールを整理するアシスタントです。\n' +
+    '入力された自由記述メモと、既存のプロフィール JSON をもとに、更新後のプロフィール JSON を返してください。\n\n' +
+    '【カテゴリ一覧】\n' + catList + '\n\n' +
+    '【ルール】\n' +
+    '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
+    '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
+    '- 既存の項目は原則として残し、自由記述メモから読み取れる新情報を追加・更新する。\n' +
+    '- 既存の内容と矛盾する情報があれば、新しい情報で上書きする(その場合、既存項目を残さない)。\n' +
+    '- 重複する内容を作らない(同じ意味の項目は 1 つにまとめる)。\n' +
+    '- label は簡潔に(例: 「年齢」「好きな食べ物」「住んでいる地域」)。value はその内容。\n' +
+    '- 自由記述から読み取れない情報は、勝手に推測して追加しない。\n' +
+    '- 値が空になる項目は出力しない。\n' +
+    '- カテゴリに振り分けにくいものは other に入れる。';
+
+  const userMsg =
+    '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n' +
+    '【自由記述メモ】\n' + freeText + '\n\n' +
+    '上記をもとに更新後の JSON を返してください。';
+
+  try {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+      + encodeURIComponent(settings.model)
+      + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: userMsg }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json'
+      },
+      systemInstruction: { parts: [{ text: sys }] }
+    };
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+      try {
+        const errData = await resp.json();
+        if (errData.error && errData.error.message) errMsg = errData.error.message;
+      } catch {}
+      throw new Error(errMsg);
+    }
+    const data = await resp.json();
+    const candidate = data.candidates && data.candidates[0];
+    if (!candidate) throw new Error('AIから応答がありませんでした');
+    const parts = candidate.content && candidate.content.parts;
+    const raw = parts ? parts.map(p => p.text || '').join('').trim() : '';
+    if (!raw) throw new Error('応答が空でした');
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      throw new Error('AI の返答を JSON として解釈できませんでした');
+    }
+    const newDetails = parsed && parsed.details && typeof parsed.details === 'object' ? parsed.details : null;
+    if (!newDetails) throw new Error('JSON に details が含まれていませんでした');
+
+    const sanitized = {};
+    PROFILE_CATEGORIES.forEach(c => {
+      const arr = newDetails[c.id];
+      if (!Array.isArray(arr)) { sanitized[c.id] = profileItems(c.id); return; }
+      sanitized[c.id] = arr
+        .filter(x => x && typeof x === 'object')
+        .map(x => ({
+          label: typeof x.label === 'string' ? x.label.trim() : '',
+          value: typeof x.value === 'string' ? x.value.trim() : ''
+        }))
+        .filter(x => x.label || x.value);
+    });
+    profile.details = sanitized;
+    // 整理後は自由記述をクリア(同じ内容を毎回再処理しないため)
+    profile.freeText = '';
+    saveProfile();
+    document.getElementById('inputProfileFreeText').value = '';
+    renderProfileCategories();
+    showToast('プロフィールを整理したよ', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast(String(e.message || e), 'error');
+  } finally {
+    isOrganizingProfile = false;
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+}
+
+document.getElementById('btnSaveProfileName').addEventListener('click', () => {
+  profile.name = document.getElementById('inputProfileName').value.trim();
+  saveProfile();
+  renderProfileNamePreview();
+  showToast('呼び方を保存したよ', 'success');
+});
+
+document.getElementById('inputProfileFreeText').addEventListener('blur', () => {
+  const v = document.getElementById('inputProfileFreeText').value;
+  if (v !== profile.freeText) {
+    profile.freeText = v;
+    saveProfile();
+  }
+});
+
+document.getElementById('btnOrganizeProfile').addEventListener('click', organizeProfileWithAI);
+
+document.getElementById('btnResetProfile').addEventListener('click', () => {
+  if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目)をすべて削除しますか?')) return;
+  profile = { ...DEFAULT_PROFILE, details: {} };
+  saveProfile();
+  renderProfileScreen();
+  showToast('プロフィールを削除したよ', 'success');
+});
+
+document.getElementById('btnSaveProfileItem').addEventListener('click', saveProfileItemFromModal);
+document.getElementById('btnCancelProfileItem').addEventListener('click', closeProfileItemModal);
+document.getElementById('profileItemModal').addEventListener('click', e => {
+  if (e.target.id === 'profileItemModal') closeProfileItemModal();
+});
+
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   applyCharTheme(getActiveChar());
 });
@@ -1112,6 +1584,7 @@ function init() {
   applyCharTheme(getActiveChar());
   updateCharDisplay();
   renderChat();
+  renderProfileScreen();
   updateApiWarning();
   if (!settings.apiKey) {
     setTimeout(() => switchScreen('settings'), 100);
