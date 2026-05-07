@@ -3,810 +3,815 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="AIエージェント">
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>AIエージェント</title>
 <style>
-/* ============================================================
-   THEME (iOS-like, light + dark)
-============================================================ */
+/* ===== ベース ===== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-size: 16px;
+  background: #F2F2F7;
+  color: #000;
+  overflow: hidden;
+}
+
+/* ライト/ダーク変数 */
 :root {
   --bg: #F2F2F7;
-  --bg-elevated: #FFFFFF;
   --card: #FFFFFF;
   --text: #000000;
-  --text-2: #3C3C43;
-  --text-3: #8E8E93;
-  --separator: rgba(60, 60, 67, 0.18);
-  --border: rgba(60, 60, 67, 0.22);
-  --user-bubble: #007AFF;
-  --user-bubble-text: #FFFFFF;
-  --ai-bubble: #E5E5EA;
-  --ai-bubble-text: #000000;
+  --text-sub: #8E8E93;
+  --border: #E5E5EA;
   --accent: #007AFF;
-  --danger: #FF3B30;
+  --user-bubble: #007AFF;
+  --user-text: #FFFFFF;
+  --ai-bubble: #E5E5EA;
+  --ai-text: #000000;
+  --tab-bg: rgba(249, 249, 249, 0.94);
+  --tab-border: rgba(0, 0, 0, 0.1);
+  --error: #FF3B30;
   --success: #34C759;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-top: env(safe-area-inset-top, 0px);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #000000;
-    --bg-elevated: #1C1C1E;
     --card: #1C1C1E;
     --text: #FFFFFF;
-    --text-2: #EBEBF5;
-    --text-3: #8E8E93;
-    --separator: rgba(84, 84, 88, 0.4);
-    --border: rgba(84, 84, 88, 0.65);
-    --user-bubble: #0A84FF;
-    --user-bubble-text: #FFFFFF;
-    --ai-bubble: #2C2C2E;
-    --ai-bubble-text: #FFFFFF;
+    --text-sub: #8E8E93;
+    --border: #38383A;
     --accent: #0A84FF;
-    --danger: #FF453A;
+    --user-bubble: #0A84FF;
+    --user-text: #FFFFFF;
+    --ai-bubble: #2C2C2E;
+    --ai-text: #FFFFFF;
+    --tab-bg: rgba(28, 28, 30, 0.94);
+    --tab-border: rgba(255, 255, 255, 0.1);
+    --error: #FF453A;
     --success: #30D158;
   }
 }
+body { background: var(--bg); color: var(--text); }
 
-/* ============================================================
-   BASE
-============================================================ */
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
-  font-size: 16px;
-  line-height: 1.5;
-  overscroll-behavior-y: contain;
-}
-body {
-  display: flex; flex-direction: column;
-  position: fixed; inset: 0;
-  width: 100%; height: 100%;
-  overflow: hidden;
-}
-button {
-  font-family: inherit; font-size: inherit;
-  cursor: pointer; border: none; background: none; color: inherit;
-  min-height: 44px; min-width: 44px;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-button:active { opacity: 0.55; }
-input, textarea, select {
-  font-family: inherit; font-size: 16px;
-  background: var(--bg-elevated); color: var(--text);
-  border: 1px solid var(--border); border-radius: 10px;
-  padding: 11px 12px; width: 100%;
-  -webkit-appearance: none; appearance: none;
-}
-textarea { resize: none; line-height: 1.4; }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
-
-/* ============================================================
-   APP STRUCTURE
-============================================================ */
-.app { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-.tab-content { flex: 1; display: none; flex-direction: column; overflow: hidden; min-height: 0; }
-.tab-content.active { display: flex; }
-
-.header {
-  padding: calc(var(--safe-top) + 12px) 16px 12px;
-  background: var(--bg-elevated);
-  border-bottom: 0.5px solid var(--separator);
-  text-align: center;
-  flex-shrink: 0;
-  position: relative;
-}
-.header h1 { font-size: 17px; font-weight: 600; }
-.header-action {
-  position: absolute;
-  right: 8px;
-  top: calc(var(--safe-top) + 6px);
-  color: var(--accent);
-  font-size: 16px;
-  padding: 6px 10px;
-  min-height: 36px;
-}
-
-/* Tab bar */
-.tab-bar {
+/* ===== レイアウト ===== */
+#app {
   display: flex;
-  background: var(--bg-elevated);
-  border-top: 0.5px solid var(--separator);
-  padding-bottom: var(--safe-bottom);
-  flex-shrink: 0;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
 }
-.tab-button {
-  flex: 1; flex-direction: column;
-  padding: 6px 0 4px;
-  min-height: 50px;
-  color: var(--text-3);
-  font-size: 10px;
-  gap: 2px;
-  font-weight: 500;
-}
-.tab-button.active { color: var(--accent); }
-.tab-button svg { width: 26px; height: 26px; }
-
-/* ============================================================
-   CHAT TAB
-============================================================ */
-.upcoming-cards {
-  flex-shrink: 0;
-  padding: 8px;
-  overflow-x: auto;
-  display: flex;
-  gap: 8px;
-  scroll-snap-type: x proximity;
-  background: var(--bg-elevated);
-  border-bottom: 0.5px solid var(--separator);
-  -webkit-overflow-scrolling: touch;
-}
-.upcoming-cards::-webkit-scrollbar { display: none; }
-.upcoming-cards:empty { display: none; padding: 0; border-bottom: none; }
-.upcoming-card {
-  flex: 0 0 auto;
-  min-width: 150px; max-width: 220px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  scroll-snap-align: start;
-}
-.upcoming-card-time { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
-.upcoming-card-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.chat-history {
+.screen {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 12px 8px;
   -webkit-overflow-scrolling: touch;
+  display: none;
+  flex-direction: column;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+.screen.active { display: flex; }
+
+/* ===== ヘッダー ===== */
+.header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* ===== タブバー ===== */
+.tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  display: flex;
+  background: var(--tab-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--tab-border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  cursor: pointer;
+  color: var(--text-sub);
+  font-size: 11px;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.tab.active { color: var(--accent); }
+.tab svg { width: 24px; height: 24px; }
+
+/* ===== チャット画面 ===== */
+.chat-list {
+  flex: 1;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 100%;
 }
-.chat-empty {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  color: var(--text-3); gap: 10px; padding: 32px; text-align: center;
+.bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 16px;
 }
-.chat-empty svg { width: 48px; height: 48px; opacity: 0.5; }
-
-.message { display: flex; flex-direction: column; max-width: 78%; gap: 2px; }
-.message.user { align-self: flex-end; align-items: flex-end; }
-.message.model { align-self: flex-start; align-items: flex-start; }
-.message-bubble {
-  padding: 9px 13px; border-radius: 18px;
-  font-size: 16px; line-height: 1.4;
-  word-wrap: break-word; white-space: pre-wrap;
-}
-.message.user .message-bubble {
-  background: var(--user-bubble); color: var(--user-bubble-text);
+.bubble.user {
+  align-self: flex-end;
+  background: var(--user-bubble);
+  color: var(--user-text);
   border-bottom-right-radius: 4px;
 }
-.message.model .message-bubble {
-  background: var(--ai-bubble); color: var(--ai-bubble-text);
+.bubble.ai {
+  align-self: flex-start;
+  background: var(--ai-bubble);
+  color: var(--ai-text);
   border-bottom-left-radius: 4px;
 }
-.message-time { font-size: 10px; color: var(--text-3); padding: 0 4px; }
-
-.typing-cursor {
-  display: inline-block; width: 2px; height: 1em;
-  background: currentColor; vertical-align: middle;
-  margin-left: 1px; animation: blink 1s infinite;
-}
-@keyframes blink { 0%, 50% { opacity: 1 } 51%, 100% { opacity: 0 } }
-
-.action-banner {
+.bubble.error {
   align-self: center;
-  background: var(--success); color: white;
-  padding: 6px 14px; border-radius: 14px;
-  font-size: 13px; font-weight: 500; margin: 4px 0;
+  background: var(--error);
+  color: #fff;
+  font-size: 14px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 90%;
 }
-.error-banner {
-  align-self: stretch;
-  background: var(--danger); color: white;
-  padding: 10px 14px; border-radius: 12px;
-  font-size: 14px; margin: 4px 0; word-wrap: break-word;
-}
-
-.chat-input {
-  flex-shrink: 0;
+.bubble.system {
+  align-self: center;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-align: center;
   padding: 8px;
-  background: var(--bg-elevated);
-  border-top: 0.5px solid var(--separator);
-  display: flex;
+  max-width: 90%;
+}
+.timestamp {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+.user .timestamp { text-align: right; }
+
+/* ローディング */
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.loading-dots span {
+  width: 8px; height: 8px;
+  background: var(--text-sub);
+  border-radius: 50%;
+  animation: dot 1.4s infinite ease-in-out both;
+}
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* チャット入力 */
+.chat-input-area {
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom));
+  left: 0; right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+  display: none;
+  gap: 8px;
   align-items: flex-end;
-  gap: 6px;
+  z-index: 9;
 }
-.chat-input-textarea {
+.chat-input-area.show { display: flex; }
+.chat-input {
   flex: 1;
-  min-height: 36px; max-height: 120px;
-  border-radius: 18px;
-  padding: 8px 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 16px;
+  font-family: inherit;
   background: var(--bg);
-  border: 1px solid var(--border);
-  font-size: 16px; line-height: 20px;
+  color: var(--text);
+  resize: none;
+  max-height: 120px;
+  min-height: 40px;
+  line-height: 1.4;
+  outline: none;
 }
-.chat-input-btn {
+.chat-input:focus { border-color: var(--accent); }
+.send-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
-  width: 36px; height: 36px;
-  min-width: 36px; min-height: 36px;
-  border-radius: 50%;
-  background: var(--accent); color: white;
 }
-.chat-input-btn:disabled { opacity: 0.4; }
-.chat-input-btn.template {
-  background: var(--bg); color: var(--accent);
-  border: 1px solid var(--border);
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
-.chat-input-btn svg { width: 18px; height: 18px; }
-.spinner {
-  width: 16px; height: 16px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: inline-block;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+.send-btn svg { width: 20px; height: 20px; }
 
-/* ============================================================
-   GENERIC SECTIONS / BUTTONS
-============================================================ */
-.scrollable {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 12px 16px calc(16px + var(--safe-bottom));
-}
-.btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px;
-  padding: 11px 16px;
-  background: var(--accent); color: white;
-  border-radius: 10px;
-  font-size: 15px; font-weight: 600;
-  min-height: 44px; border: none;
-}
-.btn-block { width: 100%; }
-.btn-secondary { background: var(--bg); color: var(--accent); border: 1px solid var(--border); }
-.btn-danger { background: var(--danger); color: white; }
-.btn:disabled { opacity: 0.5; }
+/* チャット画面のときだけ入力欄を表示するための余白 */
+#screen-chat { padding-bottom: calc(60px + 56px + env(safe-area-inset-bottom)); }
 
-.form-section {
+/* ===== 設定画面・他 ===== */
+.settings-content {
+  padding: 16px;
+}
+.section {
   background: var(--card);
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;
   margin-bottom: 16px;
-  box-shadow: var(--shadow);
 }
-.form-section h3 {
-  font-size: 13px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin-bottom: 10px;
+.section h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
-.form-group { margin-bottom: 12px; }
-.form-group:last-child { margin-bottom: 0; }
-.form-label {
-  display: block; font-size: 14px; font-weight: 500;
-  margin-bottom: 6px; color: var(--text);
-}
-.form-help { font-size: 12px; color: var(--text-3); margin-top: 4px; }
-.password-input-wrap { position: relative; }
-.password-input-wrap input { padding-right: 44px; }
-.password-toggle {
-  position: absolute; right: 4px; top: 50%;
-  transform: translateY(-50%); color: var(--text-3);
-  min-height: 36px; min-width: 36px;
-}
-.radio-row {
-  display: flex; align-items: center;
-  padding: 10px 0;
-  border-bottom: 0.5px solid var(--separator);
-  gap: 10px; cursor: pointer;
-}
-.radio-row:last-child { border-bottom: none; }
-.radio-row input[type="radio"] { width: auto; margin: 0; }
-.template-item {
-  background: var(--bg);
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.template-item-row { display: flex; align-items: center; gap: 8px; }
-.template-item-name { flex: 1; font-weight: 600; font-size: 14px; }
-.template-item-body { font-size: 13px; color: var(--text-3); white-space: pre-wrap; }
-
-/* ============================================================
-   PROFILE
-============================================================ */
-.profile-input-section {
-  background: var(--card); border-radius: 12px; padding: 12px;
-  margin-bottom: 16px; box-shadow: var(--shadow);
-}
-.profile-input-section textarea {
-  min-height: 100px; background: var(--bg);
-  border: 1px solid var(--border); margin-bottom: 8px;
-}
-.category-card {
-  background: var(--card); border-radius: 12px;
-  margin-bottom: 12px; box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.category-header {
-  padding: 10px 14px;
-  font-size: 13px; font-weight: 600; color: var(--text-3);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  display: flex; justify-content: space-between; align-items: center;
-  background: var(--card);
-  border-bottom: 0.5px solid var(--separator);
-}
-.category-header button {
-  color: var(--accent); font-size: 16px;
-  padding: 4px; min-height: 32px; min-width: 32px;
-}
-.profile-row {
-  display: flex; padding: 10px 14px;
-  border-bottom: 0.5px solid var(--separator);
-  align-items: center; gap: 8px;
-}
-.profile-row:last-child { border-bottom: none; }
-.profile-row-content { flex: 1; min-width: 0; }
-.profile-row-key { font-size: 12px; color: var(--text-3); margin-bottom: 2px; }
-.profile-row-value { font-size: 15px; color: var(--text); word-wrap: break-word; }
-.profile-row-actions { display: flex; gap: 4px; }
-.profile-row-actions button { padding: 6px; min-height: 32px; min-width: 32px; }
-.icon-btn-danger { color: var(--danger); }
-
-/* ============================================================
-   SCHEDULE / CALENDAR
-============================================================ */
-.calendar {
-  background: var(--card); border-radius: 12px;
-  padding: 12px; margin-bottom: 16px; box-shadow: var(--shadow);
-}
-.calendar-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
-}
-.calendar-title { font-size: 17px; font-weight: 600; }
-.calendar-nav { display: flex; gap: 4px; align-items: center; }
-.calendar-nav-btn { min-height: 36px; min-width: 36px; color: var(--accent); font-weight: 600; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
-.calendar-weekday {
-  text-align: center; font-size: 11px; font-weight: 600;
-  color: var(--text-3); padding: 6px 0;
-}
-.calendar-day {
-  aspect-ratio: 1;
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column;
-  font-size: 15px;
-  border-radius: 50%;
-  position: relative;
-  min-height: 36px;
-  cursor: pointer;
-}
-.calendar-day.other-month { color: var(--text-3); opacity: 0.45; }
-.calendar-day.today { color: var(--accent); font-weight: 700; }
-.calendar-day.selected { background: var(--accent); color: white; }
-.calendar-day.selected.today { color: white; }
-.calendar-day-dot {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: var(--accent); position: absolute; bottom: 4px;
-}
-.calendar-day.selected .calendar-day-dot { background: white; }
-
-.schedule-list {
-  background: var(--card); border-radius: 12px;
-  box-shadow: var(--shadow); overflow: hidden;
-}
-.schedule-list-header {
-  padding: 10px 14px;
-  font-size: 13px; font-weight: 600;
-  color: var(--text-3);
-  border-bottom: 0.5px solid var(--separator);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.schedule-item {
-  padding: 10px 14px;
-  border-bottom: 0.5px solid var(--separator);
-  display: flex; flex-direction: column; gap: 2px;
-  cursor: pointer;
-}
-.schedule-item:last-child { border-bottom: none; }
-.schedule-item:active { background: var(--bg); }
-.schedule-item-time { font-size: 12px; color: var(--accent); font-weight: 600; }
-.schedule-item-title { font-size: 16px; font-weight: 500; }
-.schedule-item-memo { font-size: 13px; color: var(--text-3); }
-.schedule-empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 14px; }
-
-.fab {
-  position: fixed;
-  bottom: calc(60px + var(--safe-bottom) + 12px);
-  right: 16px;
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  background: var(--accent); color: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  z-index: 50;
-}
-.fab svg { width: 28px; height: 28px; }
-
-/* ============================================================
-   MODAL & TOAST
-============================================================ */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 100;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  animation: fade-in 0.2s ease;
-}
-@media (min-height: 600px) {
-  .modal-overlay { align-items: center; padding: 16px; }
-}
-@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
-.modal {
-  background: var(--bg-elevated);
-  border-radius: 14px 14px 0 0;
-  width: 100%;
-  max-width: 420px;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  animation: slide-up 0.25s ease;
-}
-@media (min-height: 600px) { .modal { border-radius: 14px; } }
-@keyframes slide-up {
-  from { transform: translateY(20px); opacity: 0 }
-  to   { transform: translateY(0); opacity: 1 }
-}
-.modal-header {
-  padding: 14px 12px;
-  border-bottom: 0.5px solid var(--separator);
-  font-size: 17px; font-weight: 600;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-shrink: 0;
-}
-.modal-header > * { flex: 1; }
-.modal-header > span:nth-child(2) { text-align: center; }
-.modal-header > *:last-child { text-align: right; }
-.modal-body { padding: 16px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.modal-footer {
-  padding: 12px 16px calc(12px + var(--safe-bottom));
-  border-top: 0.5px solid var(--separator);
-  display: flex; gap: 8px;
-  flex-shrink: 0;
-}
-.modal-footer .btn { flex: 1; }
-.modal-close { color: var(--accent); font-size: 16px; padding: 4px 8px; min-height: 36px; min-width: 36px; }
-
-/* Template list inside modal */
-.template-list { display: flex; flex-direction: column; gap: 8px; }
-.template-card {
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 12px;
-  cursor: pointer;
-  border: 1px solid var(--border);
-}
-.template-card:active { background: var(--separator); }
-.template-card-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
-.template-card-body { font-size: 13px; color: var(--text-3); white-space: pre-wrap; }
-
-.toast {
-  position: fixed;
-  bottom: calc(80px + var(--safe-bottom));
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: rgba(0,0,0,0.85);
-  color: white;
-  padding: 10px 18px;
-  border-radius: 22px;
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
+  margin-bottom: 6px;
   font-size: 14px;
   font-weight: 500;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--accent);
+}
+.field textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.field .hint {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 4px;
+}
+.btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+}
+.btn:active { opacity: 0.7; }
+.btn-secondary {
+  background: var(--card);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.btn-danger {
+  background: var(--error);
+  color: white;
+}
+
+/* トースト */
+.toast {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 14px;
   opacity: 0;
-  transition: all 0.3s ease;
-  z-index: 200;
-  max-width: 80%;
+  transition: all 0.3s;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast.error { background: var(--error); }
+.toast.success { background: var(--success); }
+
+/* placeholder用画面 */
+.placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-sub);
+}
+.placeholder h2 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.placeholder p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* APIキー未設定の案内 */
+.api-warning {
+  background: #FFE5E5;
+  color: #C00;
+  padding: 12px;
+  border-radius: 10px;
+  margin: 12px;
+  font-size: 14px;
   text-align: center;
 }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.error { background: var(--danger); }
-.toast.success { background: var(--success); }
+@media (prefers-color-scheme: dark) {
+  .api-warning {
+    background: rgba(255, 69, 58, 0.2);
+    color: #FF6961;
+  }
+}
 </style>
 </head>
 <body>
-<div class="app">
-  <!-- ============ Tab: Chat ============ -->
-  <section class="tab-content" id="tab-chat" data-tab="chat">
-    <header class="header"><h1>AIエージェント</h1></header>
-    <div class="upcoming-cards" id="upcoming-cards"></div>
-    <div class="chat-history" id="chat-history"></div>
-    <div class="chat-input">
-      <button class="chat-input-btn template" id="btn-template" aria-label="テンプレート">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-      </button>
-      <textarea id="chat-textarea" class="chat-input-textarea" rows="1" placeholder="メッセージを入力..."></textarea>
-      <button class="chat-input-btn" id="btn-send" aria-label="送信">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-      </button>
+
+<div id="app">
+
+  <!-- チャット画面 -->
+  <div id="screen-chat" class="screen active">
+    <div class="header">チャット</div>
+    <div id="apiWarning" class="api-warning" style="display:none;">
+      ⚠️ APIキーが未設定です。「設定」タブで登録してください。
     </div>
-  </section>
+    <div id="chatList" class="chat-list"></div>
+  </div>
 
-  <!-- ============ Tab: Profile ============ -->
-  <section class="tab-content" id="tab-profile" data-tab="profile">
-    <header class="header"><h1>プロフィール</h1></header>
-    <div class="scrollable" id="profile-content"></div>
-  </section>
+  <!-- プロフィール画面 -->
+  <div id="screen-profile" class="screen">
+    <div class="header">プロフィール</div>
+    <div class="placeholder">
+      <h2>準備中</h2>
+      <p>第2段階で実装予定です。<br>まずはチャットを試してみてください。</p>
+    </div>
+  </div>
 
-  <!-- ============ Tab: Schedule ============ -->
-  <section class="tab-content" id="tab-schedule" data-tab="schedule">
-    <header class="header">
-      <h1>スケジュール</h1>
-      <button class="header-action" id="btn-today">今日</button>
-    </header>
-    <div class="scrollable" id="schedule-content"></div>
-    <button class="fab" id="btn-add-schedule" aria-label="予定追加">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <!-- スケジュール画面 -->
+  <div id="screen-schedule" class="screen">
+    <div class="header">スケジュール</div>
+    <div class="placeholder">
+      <h2>準備中</h2>
+      <p>第2段階で実装予定です。</p>
+    </div>
+  </div>
+
+  <!-- 設定画面 -->
+  <div id="screen-settings" class="screen">
+    <div class="header">設定</div>
+    <div class="settings-content">
+      <div class="section">
+        <h3>Gemini API</h3>
+        <div class="field">
+          <label>APIキー</label>
+          <input type="password" id="inputApiKey" placeholder="AIzaSy...">
+          <div class="hint">
+            Google AI Studioで取得 →
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com</a>
+          </div>
+        </div>
+        <div class="field">
+          <label>使用モデル</label>
+          <select id="inputModel">
+            <option value="gemini-2.5-flash">gemini-2.5-flash(推奨・無料枠広い)</option>
+            <option value="gemini-2.5-pro">gemini-2.5-pro(高性能)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>システムプロンプト</h3>
+        <div class="field">
+          <textarea id="inputSystemPrompt" rows="6" placeholder="AIへの指示や役割設定を記述..."></textarea>
+          <div class="hint">AIの振る舞いを定義します。空欄でも動作します。</div>
+        </div>
+      </div>
+
+      <button class="btn" id="btnSaveSettings">設定を保存</button>
+
+      <div style="height: 20px;"></div>
+
+      <button class="btn btn-secondary" id="btnClearChat">チャット履歴をクリア</button>
+    </div>
+  </div>
+
+  <!-- チャット入力エリア(チャット画面の時のみ表示) -->
+  <div id="chatInputArea" class="chat-input-area show">
+    <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
+    <button id="btnSend" class="send-btn" aria-label="送信">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
     </button>
-  </section>
+  </div>
 
-  <!-- ============ Tab: Admin ============ -->
-  <section class="tab-content" id="tab-admin" data-tab="admin">
-    <header class="header"><h1>管理者設定</h1></header>
-    <div class="scrollable" id="admin-content"></div>
-  </section>
-
-  <!-- ============ Tab Bar ============ -->
-  <nav class="tab-bar">
-    <button class="tab-button" data-target="chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <!-- タブバー -->
+  <nav class="tabbar">
+    <button class="tab active" data-screen="chat">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
       <span>チャット</span>
     </button>
-    <button class="tab-button" data-target="profile">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <button class="tab" data-screen="profile">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
       <span>プロフィール</span>
     </button>
-    <button class="tab-button" data-target="schedule">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <button class="tab" data-screen="schedule">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>
       <span>スケジュール</span>
     </button>
-    <button class="tab-button" data-target="admin">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <button class="tab" data-screen="settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0014 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
       <span>設定</span>
     </button>
   </nav>
+
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script>
-(function () {
 'use strict';
 
-// ============================================================
-// CONSTANTS
-// ============================================================
+// ===== 状態管理 =====
 const STORAGE_KEYS = {
   settings: 'agent_settings',
-  chat:     'agent_chat_history',
-  profile:  'agent_profile',
-  schedule: 'agent_schedule'
-};
-const DEFAULT_SYSTEM_PROMPT =
-  "あなたはユーザーの相棒となる親しみやすいAIアシスタントです。" +
-  "ユーザーのプロフィールと予定を踏まえて、自然な対話をしてください。";
-const ACTION_INSTRUCTION =
-  "\n\n【重要】ユーザーが予定を追加したい意図を示した場合のみ、応答の末尾に " +
-  "[[ACTION:ADD_SCHEDULE]]{\"title\":\"...\",\"datetime\":\"YYYY-MM-DDTHH:mm:ss\",\"memo\":\"...\"}[[/ACTION]] " +
-  "の形式で予定情報を含めてください。それ以外の通常会話では絶対にこのタグを含めないこと。" +
-  "datetimeは必ずISO8601形式で、現在の日時を踏まえて適切な日時を補完してください。" +
-  "タグ部分はユーザーには表示されません。";
-const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-
-// ============================================================
-// STATE
-// ============================================================
-const state = {
-  settings: null,
-  chatHistory: [],
-  profile: {},
-  schedule: [],
-  currentTab: 'chat',
-  selectedDate: null,
-  calendarDate: new Date(),
-  adminAuthed: false,
-  isStreaming: false,
-  firstRun: false
+  history: 'agent_chat_history'
 };
 
-// ============================================================
-// STORAGE UTILITIES
-// ============================================================
-/** Load JSON from localStorage with fallback. */
-function load(key, def) {
+const DEFAULT_SETTINGS = {
+  apiKey: '',
+  model: 'gemini-2.5-flash',
+  systemPrompt: 'あなたはユーザーの相棒となる、親しみやすく親切なAIアシスタントです。自然で温かみのある日本語で対話してください。'
+};
+
+let settings = loadSettings();
+let chatHistory = loadHistory();
+let isWaitingResponse = false;
+
+// ===== ストレージ =====
+function loadSettings() {
   try {
-    const v = localStorage.getItem(key);
-    return v == null ? def : JSON.parse(v);
+    const raw = localStorage.getItem(STORAGE_KEYS.settings);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
   } catch (e) {
-    console.error('load failed', key, e);
-    return def;
+    console.error('Settings load failed', e);
+    return { ...DEFAULT_SETTINGS };
   }
 }
-/** Save JSON to localStorage; toasts on quota errors. */
-function save(key, val) {
+function saveSettings() {
+  localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+}
+function loadHistory() {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
-    return true;
+    const raw = localStorage.getItem(STORAGE_KEYS.history);
+    return raw ? JSON.parse(raw) : [];
   } catch (e) {
-    if (e && e.name === 'QuotaExceededError') {
-      showToast('容量オーバー: 古いチャット履歴の削除を検討してください', 'error');
-    } else {
-      showToast('保存エラー: ' + e.message, 'error');
-    }
-    return false;
+    console.error('History load failed', e);
+    return [];
   }
 }
-
-// ============================================================
-// SHA-256 (Web Crypto)
-// ============================================================
-async function sha256(text) {
-  const buf = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+function saveHistory() {
+  localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(chatHistory));
 }
 
-// ============================================================
-// MISC UTILITIES
-// ============================================================
-function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-function pad(n) { return String(n).padStart(2, '0'); }
-function toLocalISO(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
-}
-function dateKey(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-function formatDateTime(iso) {
-  const d = new Date(iso);
-  if (isNaN(d)) return iso;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-  const target = new Date(d); target.setHours(0,0,0,0);
-  let dateStr;
-  if (target.getTime() === today.getTime()) dateStr = '今日';
-  else if (target.getTime() === tomorrow.getTime()) dateStr = '明日';
-  else dateStr = `${d.getMonth()+1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
-  return `${dateStr} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function formatChatTime(iso) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function escapeHtml(s) {
-  if (s == null) return '';
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// ===== トースト =====
+function showToast(message, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.className = 'toast show ' + type;
+  setTimeout(() => { el.className = 'toast ' + type; }, 2400);
 }
 
-// ============================================================
-// INITIALIZATION
-// ============================================================
-async function init() {
-  loadAll();
-  await ensureInitialSetup();
-  initSampleData();
-  bindUI();
-  switchTab('chat');
-}
+// ===== タブ切替 =====
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 
-function loadAll() {
-  state.settings    = load(STORAGE_KEYS.settings, null);
-  state.chatHistory = load(STORAGE_KEYS.chat, []);
-  state.profile     = load(STORAGE_KEYS.profile, {});
-  state.schedule    = load(STORAGE_KEYS.schedule, []);
-}
+  const screen = document.getElementById('screen-' + name);
+  const tab = document.querySelector('.tab[data-screen="' + name + '"]');
+  if (screen) screen.classList.add('active');
+  if (tab) tab.classList.add('active');
 
-async function ensureInitialSetup() {
-  if (!state.settings || !state.settings.adminPasswordHash) {
-    state.firstRun = true;
-    await showInitialPasswordSetup();
+  // チャット画面の時だけ入力欄表示
+  const inputArea = document.getElementById('chatInputArea');
+  if (name === 'chat') {
+    inputArea.classList.add('show');
+    setTimeout(scrollChatToBottom, 50);
   } else {
-    state.firstRun = false;
+    inputArea.classList.remove('show');
+  }
+}
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
+});
+
+// ===== チャット表示 =====
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+function formatTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+function renderChat() {
+  const list = document.getElementById('chatList');
+  list.innerHTML = '';
+
+  if (chatHistory.length === 0) {
+    const sys = document.createElement('div');
+    sys.className = 'bubble system';
+    sys.textContent = 'メッセージを送信してAIと対話を始めましょう';
+    list.appendChild(sys);
+    return;
+  }
+
+  chatHistory.forEach(msg => {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ' + (msg.role === 'user' ? 'user' : 'ai');
+    bubble.textContent = msg.content;
+
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.alignItems = msg.role === 'user' ? 'flex-end' : 'flex-start';
+    wrap.appendChild(bubble);
+
+    if (msg.timestamp) {
+      const ts = document.createElement('div');
+      ts.className = 'timestamp';
+      ts.textContent = formatTime(msg.timestamp);
+      wrap.appendChild(ts);
+    }
+    list.appendChild(wrap);
+  });
+}
+function appendLoading() {
+  const list = document.getElementById('chatList');
+  const wrap = document.createElement('div');
+  wrap.id = 'loadingBubble';
+  wrap.style.alignSelf = 'flex-start';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ai';
+  bubble.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+  wrap.appendChild(bubble);
+  list.appendChild(wrap);
+  scrollChatToBottom();
+}
+function removeLoading() {
+  const el = document.getElementById('loadingBubble');
+  if (el) el.remove();
+}
+function appendError(text) {
+  const list = document.getElementById('chatList');
+  const div = document.createElement('div');
+  div.className = 'bubble error';
+  div.textContent = text;
+  list.appendChild(div);
+  scrollChatToBottom();
+}
+function scrollChatToBottom() {
+  const screen = document.getElementById('screen-chat');
+  screen.scrollTop = screen.scrollHeight;
+}
+
+// ===== Gemini API =====
+async function callGemini(userMessage) {
+  if (!settings.apiKey) {
+    throw new Error('APIキーが設定されていません');
+  }
+
+  // 直近8件の履歴をコンテキストに
+  const recent = chatHistory.slice(-8);
+  const contents = recent.map(m => ({
+    role: m.role === 'ai' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+  // 今回のユーザーメッセージを追加
+  contents.push({
+    role: 'user',
+    parts: [{ text: userMessage }]
+  });
+
+  const body = {
+    contents: contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2048
+    }
+  };
+  if (settings.systemPrompt && settings.systemPrompt.trim()) {
+    body.systemInstruction = {
+      parts: [{ text: settings.systemPrompt }]
+    };
+  }
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + encodeURIComponent(settings.model)
+    + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) {
+    let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+    try {
+      const errData = await resp.json();
+      if (errData.error && errData.error.message) {
+        errMsg = errData.error.message;
+      }
+    } catch {}
+    throw new Error(errMsg);
+  }
+
+  const data = await resp.json();
+  const candidate = data.candidates && data.candidates[0];
+  if (!candidate) throw new Error('AIから応答がありませんでした');
+
+  // safety filterで止まった場合
+  if (candidate.finishReason === 'SAFETY') {
+    throw new Error('安全性フィルタにより応答できませんでした');
+  }
+
+  const parts = candidate.content && candidate.content.parts;
+  if (!parts || parts.length === 0) throw new Error('応答が空でした');
+
+  const text = parts.map(p => p.text || '').join('').trim();
+  if (!text) throw new Error('応答が空でした');
+
+  return text;
+}
+
+// ===== 送信処理 =====
+async function sendMessage() {
+  if (isWaitingResponse) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+
+  // ユーザーメッセージを追加
+  const userMsg = {
+    role: 'user',
+    content: text,
+    timestamp: new Date().toISOString()
+  };
+  chatHistory.push(userMsg);
+  saveHistory();
+  renderChat();
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  isWaitingResponse = true;
+  document.getElementById('btnSend').disabled = true;
+  appendLoading();
+  scrollChatToBottom();
+
+  try {
+    const reply = await callGemini(text);
+    chatHistory.push({
+      role: 'ai',
+      content: reply,
+      timestamp: new Date().toISOString()
+    });
+    saveHistory();
+    removeLoading();
+    renderChat();
+    scrollChatToBottom();
+  } catch (e) {
+    removeLoading();
+    appendError(String(e.message || e));
+    console.error(e);
+  } finally {
+    isWaitingResponse = false;
+    document.getElementById('btnSend').disabled = false;
   }
 }
 
-/** Add sample schedule and templates only on first run. */
-function initSampleData() {
-  if (!state.firstRun) return;
+// ===== UIイベント =====
+document.getElementById('btnSend').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+document.getElementById('chatInput').addEventListener('input', e => {
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+});
 
-  // Sample schedule - today evening + tomorrow morning
-  const today = new Date(); today.setHours(18, 0, 0, 0);
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(10, 0, 0, 0);
-  state.schedule = [
-    { id: uid(), title: '夕食', datetime: toLocalISO(today),    memo: 'サンプル予定です。削除可能。', createdAt: new Date().toISOString() },
-    { id: uid(), title: '打ち合わせ', datetime: toLocalISO(tomorrow), memo: 'サンプル予定です。削除可能。', createdAt: new Date().toISOString() }
-  ];
-  save(STORAGE_KEYS.schedule, state.schedule);
+// 設定画面
+document.getElementById('btnSaveSettings').addEventListener('click', () => {
+  settings.apiKey = document.getElementById('inputApiKey').value.trim();
+  settings.model = document.getElementById('inputModel').value;
+  settings.systemPrompt = document.getElementById('inputSystemPrompt').value;
+  saveSettings();
+  updateApiWarning();
+  showToast('設定を保存しました', 'success');
+});
 
-  // Sample templates
-  state.settings.templates = [
-    { id: uid(), name: '今日の振り返り', body: '今日一日を振り返ってみたい。一緒に整理してくれる?' },
-    { id: uid(), name: '明日の予定確認', body: '明日の予定を確認したい。何があったっけ?' },
-    { id: uid(), name: '気分転換に雑談', body: 'ちょっと気分転換に雑談したい気分。最近の面白い話題ない?' }
-  ];
-  save(STORAGE_KEYS.settings, state.settings);
+document.getElementById('btnClearChat').addEventListener('click', () => {
+  if (!confirm('チャット履歴をすべて削除しますか?')) return;
+  chatHistory = [];
+  saveHistory();
+  renderChat();
+  showToast('履歴を削除しました', 'success');
+});
+
+// APIキー未設定の警告
+function updateApiWarning() {
+  const warn = document.getElementById('apiWarning');
+  warn.style.display = settings.apiKey ? 'none' : 'block';
 }
 
-// ============================================================
-// TAB SWITCHING
-// ============================================================
-function switchTab(name) {
-  state.currentTab = name;
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.target === name));
+// ===== 初期化 =====
+function init() {
+  // 設定をフォームに反映
+  document.getElementById('inputApiKey').value = settings.apiKey || '';
+  document.getElementById('inputModel').value = settings.model || DEFAULT_SETTINGS.model;
+  document.getElementById('inputSystemPrompt').value = settings.systemPrompt || '';
 
-  if (name === 'chat')      renderChat();
-  else if (name === 'profile')  renderProfile();
-  else if (name === 'schedule') renderSchedule();
-  else if (name === 'admin') {
-    if (state.adminAuthed) renderAdmin();
-    else showAdminAuth();
+  renderChat();
+  updateApiWarning();
+
+  // APIキー未設定なら設定タブへ誘導
+  if (!settings.apiKey) {
+    setTimeout(() => switchScreen('settings'), 100);
   }
 }
 
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = 'toast' + (type ? ' ' + type : '');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => t.remove(), 300);
-  }, 2500);
-}
-
-// ============================================================
-// CONFIRM / PROMPT
-// ============================================================
-function showConfirm(msg, options = {}) {
-  return new Promise((resolve) => {
-    const okText = options.okText || 'OK';
-    const cancelText = options.cancelText || 'キャンセル';
-    const danger = options.danger;
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal" style="max-width:340px">
-        <div class="modal-body" style="padding:24px 20px;text-align:center;">
-          <div style="font-size:15px;line-height:1.5;white-space:pre-wrap">${escapeHtml(msg)}</div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-cancel>${escapeHtml(cancelText)}</button>
-          <button class="btn ${danger ? 'btn-danger' : ''}" data-ok>${escapeHtml(okText)}</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.querySelector('[data-ok]').onclick     = () => { overlay.remove(); resolve(true); };
-    overlay.querySelector('[data-cancel]').onclick = () => { overlay.remove(); resolve(false); };
-    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resol
+init();
+</script>
+</body>
+</html>
