@@ -2903,14 +2903,18 @@ function getZodiac(birthday) {
   return ZODIAC.find(z => z.id === 'capricorn');
 }
 
-async function callGeminiSimple(prompt, useSearch) {
+async function callGeminiSimple(prompt, useSearch, opts) {
   if (!settings.apiKey) throw new Error('APIキーが設定されていません');
+  const o = opts || {};
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
     + encodeURIComponent(settings.model)
     + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+    generationConfig: {
+      temperature: typeof o.temperature === 'number' ? o.temperature : 0.7,
+      maxOutputTokens: o.maxOutputTokens || 8192
+    }
   };
   if (useSearch) body.tools = [{ google_search: {} }];
   const resp = await fetch(url, {
@@ -2928,11 +2932,22 @@ async function callGeminiSimple(prompt, useSearch) {
   }
   const data = await resp.json();
   const cand = data.candidates && data.candidates[0];
-  if (!cand) throw new Error('AIから応答がありませんでした');
+  if (!cand) {
+    console.error('Gemini: no candidate', data);
+    throw new Error('AI から応答がありませんでした (候補なし)');
+  }
   if (cand.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
   const ps = cand.content && cand.content.parts;
   const text = ps ? ps.map(p => p.text || '').join('').trim() : '';
-  if (!text) throw new Error('応答が空でした');
+  if (!text) {
+    console.error('Gemini: empty text. finishReason=', cand.finishReason, 'parts=', ps, 'raw=', data);
+    let detail = '';
+    if (cand.finishReason === 'MAX_TOKENS') detail = ' (出力トークン上限に達しました。設定でモデルを Pro に変えるか、もう一度試してください)';
+    else if (cand.finishReason && cand.finishReason !== 'STOP') detail = ' (理由: ' + cand.finishReason + ')';
+    else if (!ps || ps.length === 0) detail = ' (parts なし)';
+    else detail = ' (text 部分なし、parts 数: ' + ps.length + ')';
+    throw new Error('応答が空でした' + detail);
+  }
   let sources = [];
   const gm = cand.groundingMetadata;
   if (gm && Array.isArray(gm.groundingChunks)) {
@@ -3140,7 +3155,7 @@ async function loadNews(force) {
       '- できるだけ新しい話題を優先\n' +
       '- 同じテーマで重複しない\n' +
       '- url は実在のものを記載';
-    const { text, sources } = await callGeminiSimple(prompt, true);
+    const { text, sources } = await callGeminiSimple(prompt, true, { maxOutputTokens: 16384, temperature: 0.5 });
     let arr;
     try {
       arr = parseJsonFromText(text);
