@@ -835,6 +835,12 @@ body.bg-cage .timestamp {
         <button class="btn" id="btnProfileImageUpload">📷 画像を選んで読み取る</button>
       </div>
 
+      <div class="section">
+        <h3>現在地から取り込む</h3>
+        <div class="hint" style="margin-bottom:10px;">位置情報を取得して AI が地域を判定し、location カテゴリに追加します。位置情報は Google に送信されます。</div>
+        <button class="btn" id="btnProfileGeoUpload">📍 現在地を読み取る</button>
+      </div>
+
       <div id="profileCategories"></div>
 
       <div class="section">
@@ -1951,124 +1957,6 @@ function buildProfilePromptText() {
   return '\n\n' + parts.join('\n\n');
 }
 
-async function organizeProfileWithAI() {
-  if (isOrganizingProfile) return;
-  if (!settings.apiKey) {
-    showToast('APIキーを設定してください', 'error');
-    switchScreen('settings');
-    return;
-  }
-  const freeText = document.getElementById('inputProfileFreeText').value.trim();
-  if (!freeText) {
-    showToast('自由記述に何か書いてから押してね', 'error');
-    return;
-  }
-  // 入力中の name も保存しておく
-  profile.name = document.getElementById('inputProfileName').value.trim();
-  profile.freeText = freeText;
-  saveProfile();
-
-  const btn = document.getElementById('btnOrganizeProfile');
-  isOrganizingProfile = true;
-  const origLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '整理中...';
-
-  const catList = PROFILE_CATEGORIES.map(c => '- ' + c.id + ' (' + c.name + '): ' + c.hint).join('\n');
-  const existing = {};
-  PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
-
-  const sys =
-    'あなたはユーザープロフィールを整理するアシスタントです。\n' +
-    '入力された自由記述メモと、既存のプロフィール JSON をもとに、更新後のプロフィール JSON を返してください。\n\n' +
-    '【カテゴリ一覧】\n' + catList + '\n\n' +
-    '【ルール】\n' +
-    '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
-    '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
-    '- 既存の項目は原則として残し、自由記述メモから読み取れる新情報を追加・更新する。\n' +
-    '- 既存の内容と矛盾する情報があれば、新しい情報で上書きする(その場合、既存項目を残さない)。\n' +
-    '- 重複する内容を作らない(同じ意味の項目は 1 つにまとめる)。\n' +
-    '- label は簡潔に(例: 「年齢」「好きな食べ物」「住んでいる地域」)。value はその内容。\n' +
-    '- 自由記述から読み取れない情報は、勝手に推測して追加しない。\n' +
-    '- 値が空になる項目は出力しない。\n' +
-    '- カテゴリに振り分けにくいものは other に入れる。';
-
-  const userMsg =
-    '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n' +
-    '【自由記述メモ】\n' + freeText + '\n\n' +
-    '上記をもとに更新後の JSON を返してください。';
-
-  try {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
-      + encodeURIComponent(settings.model)
-      + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
-    const body = {
-      contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-        responseMimeType: 'application/json'
-      },
-      systemInstruction: { parts: [{ text: sys }] }
-    };
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) {
-      let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
-      try {
-        const errData = await resp.json();
-        if (errData.error && errData.error.message) errMsg = errData.error.message;
-      } catch {}
-      throw new Error(errMsg);
-    }
-    const data = await resp.json();
-    const candidate = data.candidates && data.candidates[0];
-    if (!candidate) throw new Error('AIから応答がありませんでした');
-    const parts = candidate.content && candidate.content.parts;
-    const raw = parts ? parts.map(p => p.text || '').join('').trim() : '';
-    if (!raw) throw new Error('応答が空でした');
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
-    let parsed;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (e) {
-      throw new Error('AI の返答を JSON として解釈できませんでした');
-    }
-    const newDetails = parsed && parsed.details && typeof parsed.details === 'object' ? parsed.details : null;
-    if (!newDetails) throw new Error('JSON に details が含まれていませんでした');
-
-    const sanitized = {};
-    PROFILE_CATEGORIES.forEach(c => {
-      const arr = newDetails[c.id];
-      if (!Array.isArray(arr)) { sanitized[c.id] = profileItems(c.id); return; }
-      sanitized[c.id] = arr
-        .filter(x => x && typeof x === 'object')
-        .map(x => ({
-          label: typeof x.label === 'string' ? x.label.trim() : '',
-          value: typeof x.value === 'string' ? x.value.trim() : ''
-        }))
-        .filter(x => x.label || x.value);
-    });
-    profile.details = sanitized;
-    // 整理後は自由記述をクリア(同じ内容を毎回再処理しないため)
-    profile.freeText = '';
-    saveProfile();
-    document.getElementById('inputProfileFreeText').value = '';
-    renderProfileCategories();
-    showToast('プロフィールを整理したよ', 'success');
-  } catch (e) {
-    console.error(e);
-    showToast(String(e.message || e), 'error');
-  } finally {
-    isOrganizingProfile = false;
-    btn.disabled = false;
-    btn.textContent = origLabel;
-  }
-}
-
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2083,6 +1971,130 @@ function dataUrlToBase64Parts(dataUrl) {
   return { mimeType: m[1], data: m[2] };
 }
 
+function buildProfileSysPrompt(modeBlock) {
+  const catList = PROFILE_CATEGORIES.map(c => '- ' + c.id + ' (' + c.name + '): ' + c.hint).join('\n');
+  return 'あなたはユーザープロフィールを整理するアシスタントです。\n' +
+    '入力情報と既存プロフィール JSON をもとに、更新後のプロフィール JSON を返してください。\n\n' +
+    modeBlock + '\n\n' +
+    '【カテゴリ一覧】\n' + catList + '\n\n' +
+    '【ルール】\n' +
+    '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
+    '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
+    '- 既存の項目は原則として残し、新情報を追加・更新する。\n' +
+    '- 既存と矛盾する情報があれば新しい情報で上書きする。\n' +
+    '- 重複する内容を作らない(同じ意味の項目は 1 つにまとめる)。\n' +
+    '- label は簡潔に、value はその内容。\n' +
+    '- 確実に読み取れる情報のみ追加(推測しない)。\n' +
+    '- 値が空になる項目は出力しない。\n' +
+    '- カテゴリに振り分けにくいものは other に入れる。';
+}
+
+async function callGeminiProfileMerge(parts, sys) {
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + encodeURIComponent(settings.model)
+    + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 4096,
+      responseMimeType: 'application/json'
+    },
+    systemInstruction: { parts: [{ text: sys }] }
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+    try {
+      const ed = await resp.json();
+      if (ed.error && ed.error.message) errMsg = ed.error.message;
+    } catch {}
+    throw new Error(errMsg);
+  }
+  const data = await resp.json();
+  const cand = data.candidates && data.candidates[0];
+  if (!cand) throw new Error('AIから応答がありませんでした');
+  if (cand.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
+  const ps = cand.content && cand.content.parts;
+  const raw = ps ? ps.map(p => p.text || '').join('').trim() : '';
+  if (!raw) throw new Error('応答が空でした');
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (e) { throw new Error('AI の返答を JSON として解釈できませんでした'); }
+  const newDetails = parsed && parsed.details && typeof parsed.details === 'object' ? parsed.details : null;
+  if (!newDetails) throw new Error('JSON に details が含まれていませんでした');
+
+  const before = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
+  const sanitized = {};
+  PROFILE_CATEGORIES.forEach(c => {
+    const arr = newDetails[c.id];
+    if (!Array.isArray(arr)) { sanitized[c.id] = profileItems(c.id); return; }
+    sanitized[c.id] = arr
+      .filter(x => x && typeof x === 'object')
+      .map(x => ({
+        label: typeof x.label === 'string' ? x.label.trim() : '',
+        value: typeof x.value === 'string' ? x.value.trim() : ''
+      }))
+      .filter(x => x.label || x.value);
+  });
+  profile.details = sanitized;
+  saveProfile();
+  renderProfileCategories();
+  const after = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
+  return after - before;
+}
+
+function existingProfileBlock() {
+  const existing = {};
+  PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
+  return '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n';
+}
+
+async function organizeProfileWithAI() {
+  if (isOrganizingProfile) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  const freeText = document.getElementById('inputProfileFreeText').value.trim();
+  if (!freeText) { showToast('自由記述に何か書いてから押してね', 'error'); return; }
+  profile.name = document.getElementById('inputProfileName').value.trim();
+  profile.freeText = freeText;
+  saveProfile();
+
+  const btn = document.getElementById('btnOrganizeProfile');
+  const origLabel = btn.textContent;
+  isOrganizingProfile = true;
+  btn.disabled = true;
+  btn.textContent = '整理中...';
+  try {
+    const sys = buildProfileSysPrompt(
+      '【入力】自由記述メモ。本人の自己紹介として読み取って各カテゴリに振り分けてください。'
+    );
+    const userMsg = existingProfileBlock() +
+      '【自由記述メモ】\n' + freeText + '\n\n' +
+      '上記をもとに更新後の JSON を返してください。';
+    await callGeminiProfileMerge([{ text: userMsg }], sys);
+    profile.freeText = '';
+    saveProfile();
+    document.getElementById('inputProfileFreeText').value = '';
+    showToast('プロフィールを整理したよ', 'success');
+  } catch (e) {
+    console.error(e);
+    showToast(String(e.message || e), 'error');
+  } finally {
+    isOrganizingProfile = false;
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+}
+
 async function readProfileFromImage(file, mode) {
   if (isOrganizingProfile) return;
   if (!settings.apiKey) {
@@ -2094,126 +2106,27 @@ async function readProfileFromImage(file, mode) {
     showToast('画像ファイルを選んでください', 'error');
     return;
   }
-
   const btn = document.getElementById('btnProfileImageUpload');
   const origLabel = btn.textContent;
   isOrganizingProfile = true;
   btn.disabled = true;
   btn.textContent = '読み取り中...';
-
   try {
     const rawUrl = await fileToDataUrl(file);
     let compressed;
-    try {
-      compressed = await compressDataUrl(rawUrl, 1280, 0.85);
-    } catch (e) {
-      compressed = rawUrl;
-    }
+    try { compressed = await compressDataUrl(rawUrl, 1280, 0.85); }
+    catch (e) { compressed = rawUrl; }
     const { mimeType, data } = dataUrlToBase64Parts(compressed);
-
-    const catList = PROFILE_CATEGORIES.map(c => '- ' + c.id + ' (' + c.name + '): ' + c.hint).join('\n');
-    const existing = {};
-    PROFILE_CATEGORIES.forEach(c => { existing[c.id] = profileItems(c.id); });
-
-    let modeBlock;
-    if (mode === 'text') {
-      modeBlock =
-        '【解釈モード】画像内の文字をすべて読み取り(OCR)、ユーザーの情報として該当するものだけを抽出してください。\n' +
-        '想定例: 名刺、メモ書き、賞状、書類、看板、レシート、メッセージなど。\n' +
-        '読み取った文字情報のうち、ユーザー本人に関係する内容(名前・所属・興味分野・住所・連絡先など)をプロフィールに反映してください。\n' +
-        'ユーザーと無関係な文字は無視してください。';
-    } else {
-      modeBlock =
-        '【解釈モード】画像に写っているもの・場面から、ユーザーの趣味・好きなもの・関心事・ライフスタイルを推測してプロフィールに反映してください。\n' +
-        '想定例: ペット、コレクション、本、料理、習い事の様子、風景、お気に入りの場所など。\n' +
-        '画像から確実に読み取れる内容のみ追加してください。';
-    }
-
-    const sys =
-      'あなたはユーザープロフィールを画像から整理するアシスタントです。\n' +
-      '入力された画像と既存プロフィール JSON をもとに、更新後のプロフィール JSON を返してください。\n\n' +
-      modeBlock + '\n\n' +
-      '【カテゴリ一覧】\n' + catList + '\n\n' +
-      '【ルール】\n' +
-      '- 出力は JSON オブジェクトのみ。説明文・コードブロック・前置きは禁止。\n' +
-      '- スキーマ: { "details": { <カテゴリID>: [ { "label": string, "value": string }, ... ], ... } }\n' +
-      '- 既存の項目は原則として残し、画像から読み取れる新情報を追加・更新する。\n' +
-      '- 既存の内容と矛盾する場合のみ、新しい情報で上書きする。\n' +
-      '- 重複する内容を作らない。\n' +
-      '- label は簡潔に。value はその内容。\n' +
-      '- 画像から読み取れない情報は推測で追加しない。\n' +
-      '- 値が空になる項目は出力しない。\n' +
-      '- カテゴリに振り分けにくいものは other に入れる。';
-
-    const userText =
-      '【既存のプロフィール】\n' + JSON.stringify({ details: existing }, null, 2) + '\n\n' +
-      '上記と添付画像をもとに、更新後の JSON を返してください。';
-
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
-      + encodeURIComponent(settings.model)
-      + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
-    const body = {
-      contents: [{
-        role: 'user',
-        parts: [
-          { text: userText },
-          { inlineData: { mimeType, data } }
-        ]
-      }],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-        responseMimeType: 'application/json'
-      },
-      systemInstruction: { parts: [{ text: sys }] }
-    };
-
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) {
-      let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
-      try {
-        const errData = await resp.json();
-        if (errData.error && errData.error.message) errMsg = errData.error.message;
-      } catch {}
-      throw new Error(errMsg);
-    }
-    const respData = await resp.json();
-    const candidate = respData.candidates && respData.candidates[0];
-    if (!candidate) throw new Error('AIから応答がありませんでした');
-    if (candidate.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
-    const parts = candidate.content && candidate.content.parts;
-    const raw = parts ? parts.map(p => p.text || '').join('').trim() : '';
-    if (!raw) throw new Error('応答が空でした');
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
-    let parsed;
-    try { parsed = JSON.parse(cleaned); }
-    catch (e) { throw new Error('AI の返答を JSON として解釈できませんでした'); }
-    const newDetails = parsed && parsed.details && typeof parsed.details === 'object' ? parsed.details : null;
-    if (!newDetails) throw new Error('JSON に details が含まれていませんでした');
-
-    const beforeCount = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
-    const sanitized = {};
-    PROFILE_CATEGORIES.forEach(c => {
-      const arr = newDetails[c.id];
-      if (!Array.isArray(arr)) { sanitized[c.id] = profileItems(c.id); return; }
-      sanitized[c.id] = arr
-        .filter(x => x && typeof x === 'object')
-        .map(x => ({
-          label: typeof x.label === 'string' ? x.label.trim() : '',
-          value: typeof x.value === 'string' ? x.value.trim() : ''
-        }))
-        .filter(x => x.label || x.value);
-    });
-    profile.details = sanitized;
-    saveProfile();
-    renderProfileCategories();
-    const afterCount = PROFILE_CATEGORIES.reduce((n, c) => n + profileItems(c.id).length, 0);
-    const diff = afterCount - beforeCount;
-    showToast(diff > 0 ? ('画像から ' + diff + ' 件追加したよ') : '画像を読み取ったけど、新しい情報は見つからなかった', diff > 0 ? 'success' : '');
+    const modeBlock = mode === 'text'
+      ? '【入力】画像。画像内の文字をすべて読み取り(OCR)、ユーザー本人に関係する内容(名前・所属・興味分野・住所・連絡先など)を抽出してください。無関係な文字は無視してください。想定例: 名刺、メモ書き、賞状、書類、看板、レシートなど。'
+      : '【入力】画像。写っているもの・場面から、ユーザーの趣味・好きなもの・関心事・ライフスタイルを推測して反映してください。想定例: ペット、コレクション、本、料理、習い事、風景、お気に入りの場所など。';
+    const sys = buildProfileSysPrompt(modeBlock);
+    const userText = existingProfileBlock() + '上記と添付画像をもとに、更新後の JSON を返してください。';
+    const diff = await callGeminiProfileMerge([
+      { text: userText },
+      { inlineData: { mimeType, data } }
+    ], sys);
+    showToast(diff > 0 ? ('画像から ' + diff + ' 件追加したよ') : '画像を読み取ったけど新しい情報は見つからなかった', diff > 0 ? 'success' : '');
   } catch (e) {
     console.error(e);
     showToast(String(e.message || e), 'error');
@@ -2224,6 +2137,61 @@ async function readProfileFromImage(file, mode) {
     document.getElementById('inputProfileImage').value = '';
   }
 }
+
+async function readProfileFromGeolocation() {
+  if (isOrganizingProfile) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  if (!('geolocation' in navigator)) {
+    showToast('このブラウザは位置情報に対応していません', 'error');
+    return;
+  }
+  const btn = document.getElementById('btnProfileGeoUpload');
+  const origLabel = btn.textContent;
+  isOrganizingProfile = true;
+  btn.disabled = true;
+  btn.textContent = '位置情報取得中...';
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000
+      });
+    });
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const acc = Math.round(pos.coords.accuracy);
+    btn.textContent = '解釈中...';
+    const modeBlock =
+      '【入力】緯度経度。日本国内かどうか判定し、都道府県・市区町村レベルで該当する地域を location カテゴリに追加してください。\n' +
+      '精度(accuracy)が大きい場合(例: 1000m 以上)は市区町村まで、小さい場合(例: 100m 以下)は町名・施設名まで含めても良い。\n' +
+      '緯度経度から確実に判別できない場合は推測で書かない。';
+    const sys = buildProfileSysPrompt(modeBlock);
+    const userMsg = existingProfileBlock() +
+      '【位置情報】\n緯度: ' + lat + '\n経度: ' + lng + '\n精度: ±' + acc + 'm\n\n' +
+      '上記をもとに更新後の JSON を返してください。';
+    const diff = await callGeminiProfileMerge([{ text: userMsg }], sys);
+    showToast(diff > 0 ? ('現在地から ' + diff + ' 件追加したよ') : '位置情報を読み取ったけど新しい情報は見つからなかった', diff > 0 ? 'success' : '');
+  } catch (e) {
+    console.error(e);
+    let msg = String(e.message || e);
+    if (e && typeof e.code === 'number') {
+      if (e.code === 1) msg = '位置情報の利用が拒否されています';
+      else if (e.code === 2) msg = '位置情報を取得できませんでした';
+      else if (e.code === 3) msg = '位置情報の取得がタイムアウトしました';
+    }
+    showToast(msg, 'error');
+  } finally {
+    isOrganizingProfile = false;
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+}
+
 
 function renderCalendar() {
   const grid = document.getElementById('calGrid');
@@ -2587,6 +2555,8 @@ document.getElementById('inputProfileImage').addEventListener('change', e => {
   const mode = document.getElementById('profileImageMode').value;
   readProfileFromImage(file, mode);
 });
+
+document.getElementById('btnProfileGeoUpload').addEventListener('click', readProfileFromGeolocation);
 
 document.getElementById('btnResetProfile').addEventListener('click', () => {
   if (!confirm('プロフィール(呼び方・自由記述・全カテゴリの項目)をすべて削除しますか?')) return;
