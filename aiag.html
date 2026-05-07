@@ -303,11 +303,95 @@ body.bg-cage .timestamp {
   border-top: 1px solid var(--border);
   padding: 8px 12px;
   display: none;
-  gap: 8px;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 6px;
   z-index: 9;
 }
 .chat-input-area.show { display: flex; }
+.chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chat-attachments:empty { display: none; }
+.chat-attach-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-solid);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 6px 4px 4px;
+  max-width: 160px;
+}
+.chat-attach-chip img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.chat-attach-chip .file-icon {
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background: var(--char-bubble);
+  color: var(--char-bubble-text);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.chat-attach-chip .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text);
+}
+.chat-attach-remove {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chat-attach-remove:active { color: var(--error); }
+.bubble-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.bubble-attachments img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  display: block;
+  cursor: pointer;
+}
+.bubble-attach-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+.bubble.user .bubble-attach-file { background: rgba(255,255,255,0.25); color: inherit; }
+.bubble-attach-file .file-icon { font-size: 18px; }
 .chat-input {
   flex: 1;
   padding: 10px 14px;
@@ -1528,13 +1612,18 @@ body.bg-cage .timestamp {
   </div>
 
   <div id="chatInputArea" class="chat-input-area">
-    <button id="btnImageGen" class="image-gen-btn" aria-label="画像を生成" title="画像を作る">🎨</button>
-    <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
-    <button id="btnSend" class="send-btn" aria-label="送信">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-      </svg>
-    </button>
+    <div id="chatAttachments" class="chat-attachments"></div>
+    <div class="chat-input-row">
+      <button id="btnImageGen" class="image-gen-btn" aria-label="画像を生成" title="画像を作る">🎨</button>
+      <button id="btnAttach" class="image-gen-btn" aria-label="ファイルを添付" title="ファイルや画像を添付">📎</button>
+      <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
+      <button id="btnSend" class="send-btn" aria-label="送信">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
+    <input type="file" id="inputAttach" accept="image/*,.pdf,.txt,.md,.json,.csv,.html" multiple style="display:none;">
   </div>
 
   <nav class="tabbar">
@@ -2079,7 +2168,36 @@ function renderChat() {
       im.addEventListener('click', () => openImageZoom(msg.imageData));
       bubble.appendChild(im);
     } else {
-      bubble.textContent = msg.content;
+      if (Array.isArray(msg.attachments) && msg.attachments.length > 0) {
+        const attRow = document.createElement('div');
+        attRow.className = 'bubble-attachments';
+        msg.attachments.forEach(a => {
+          if (a.isImage && a.dataUrl) {
+            const img = document.createElement('img');
+            img.src = a.dataUrl;
+            img.alt = a.name || '';
+            img.addEventListener('click', () => openImageZoom(a.dataUrl));
+            attRow.appendChild(img);
+          } else {
+            const fi = document.createElement('div');
+            fi.className = 'bubble-attach-file';
+            const ic = document.createElement('span');
+            ic.className = 'file-icon';
+            ic.textContent = a.mimeType === 'application/pdf' ? '📄' : '📝';
+            fi.appendChild(ic);
+            const nm = document.createElement('span');
+            nm.textContent = a.name || a.mimeType || 'ファイル';
+            fi.appendChild(nm);
+            attRow.appendChild(fi);
+          }
+        });
+        bubble.appendChild(attRow);
+      }
+      if (msg.content) {
+        const tx = document.createElement('div');
+        tx.textContent = msg.content;
+        bubble.appendChild(tx);
+      }
     }
     wrap.appendChild(bubble);
     if (msg.timestamp) {
@@ -2273,7 +2391,7 @@ function openImageZoom(src) {
   document.getElementById('charZoom').classList.add('show');
 }
 
-async function callGemini(userMessage) {
+async function callGemini(userMessage, attachments) {
   if (!settings.apiKey) {
     throw new Error('APIキーが設定されていません');
   }
@@ -2281,14 +2399,28 @@ async function callGemini(userMessage) {
   const recent = chatHistory
     .filter(m => !m.imageGenRequest && !m.imageGenResponse)
     .slice(-8);
-  const contents = recent.map(m => ({
-    role: m.role === 'ai' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }));
-  contents.push({
-    role: 'user',
-    parts: [{ text: userMessage }]
+  const contents = recent.map(m => {
+    let txt = m.content || '';
+    if (Array.isArray(m.attachments) && m.attachments.length > 0) {
+      const names = m.attachments.map(a => a.name || a.mimeType || 'ファイル').join('、');
+      txt = (txt ? txt + '\n' : '') + '[添付: ' + names + ']';
+    }
+    return {
+      role: m.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: txt || ' ' }]
+    };
   });
+  const userParts = [];
+  if (Array.isArray(attachments)) {
+    attachments.forEach(a => {
+      if (a && a.mimeType && a.base64) {
+        userParts.push({ inlineData: { mimeType: a.mimeType, data: a.base64 } });
+      }
+    });
+  }
+  if (userMessage) userParts.push({ text: userMessage });
+  if (userParts.length === 0) userParts.push({ text: ' ' });
+  contents.push({ role: 'user', parts: userParts });
 
   const systemText = char.systemPrompt + buildProfilePromptText();
   const body = {
@@ -2328,11 +2460,98 @@ async function callGemini(userMessage) {
   return text;
 }
 
+// ===== チャット添付 =====
+let pendingAttachments = [];
+const ATTACH_MAX_BYTES_PER_FILE = 8 * 1024 * 1024;
+const ATTACH_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+const ATTACH_ACCEPT_PREFIXES = ['image/', 'application/pdf', 'text/'];
+function isAcceptedAttachment(mime) {
+  if (!mime) return false;
+  return ATTACH_ACCEPT_PREFIXES.some(p => mime === p || mime.startsWith(p));
+}
+function totalAttachBytes() {
+  return pendingAttachments.reduce((sum, a) => sum + (a.size || 0), 0);
+}
+async function addAttachmentFiles(files) {
+  for (const file of files) {
+    if (!file) continue;
+    if (!isAcceptedAttachment(file.type)) {
+      showToast('対応外のファイル形式: ' + (file.name || file.type), 'error');
+      continue;
+    }
+    if (file.size > ATTACH_MAX_BYTES_PER_FILE) {
+      showToast('ファイルが大きすぎます (8MB まで): ' + file.name, 'error');
+      continue;
+    }
+    if (totalAttachBytes() + file.size > ATTACH_MAX_TOTAL_BYTES) {
+      showToast('合計サイズが大きすぎます (20MB まで)', 'error');
+      break;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const { mimeType, data } = dataUrlToBase64Parts(dataUrl);
+      pendingAttachments.push({
+        name: file.name || 'ファイル',
+        size: file.size,
+        mimeType: mimeType,
+        base64: data,
+        dataUrl: dataUrl,
+        isImage: mimeType.startsWith('image/')
+      });
+    } catch (e) {
+      console.error(e);
+      showToast('ファイル読み込みに失敗: ' + (file.name || ''), 'error');
+    }
+  }
+  renderPendingAttachments();
+}
+function removePendingAttachment(idx) {
+  pendingAttachments.splice(idx, 1);
+  renderPendingAttachments();
+}
+function clearPendingAttachments() {
+  pendingAttachments = [];
+  renderPendingAttachments();
+}
+function renderPendingAttachments() {
+  const root = document.getElementById('chatAttachments');
+  if (!root) return;
+  root.innerHTML = '';
+  pendingAttachments.forEach((a, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'chat-attach-chip';
+    if (a.isImage) {
+      const img = document.createElement('img');
+      img.src = a.dataUrl;
+      img.alt = a.name;
+      chip.appendChild(img);
+    } else {
+      const ic = document.createElement('div');
+      ic.className = 'file-icon';
+      ic.textContent = a.mimeType === 'application/pdf' ? '📄' : '📝';
+      chip.appendChild(ic);
+    }
+    const nm = document.createElement('span');
+    nm.className = 'name';
+    nm.textContent = a.name;
+    chip.appendChild(nm);
+    const x = document.createElement('button');
+    x.className = 'chat-attach-remove';
+    x.type = 'button';
+    x.textContent = '×';
+    x.setAttribute('aria-label', '削除');
+    x.addEventListener('click', () => removePendingAttachment(idx));
+    chip.appendChild(x);
+    root.appendChild(chip);
+  });
+}
+
 async function sendMessage() {
   if (isWaitingResponse) return;
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
-  if (!text) return;
+  const attachments = pendingAttachments.slice();
+  if (!text && attachments.length === 0) return;
 
   if (!settings.apiKey) {
     showToast('APIキーを設定してください', 'error');
@@ -2345,11 +2564,20 @@ async function sendMessage() {
     content: text,
     timestamp: new Date().toISOString()
   };
+  if (attachments.length > 0) {
+    userMsg.attachments = attachments.map(a => ({
+      name: a.name,
+      mimeType: a.mimeType,
+      isImage: a.isImage,
+      dataUrl: a.dataUrl
+    }));
+  }
   chatHistory.push(userMsg);
   saveChatHistory();
   renderChat();
   input.value = '';
   input.style.height = 'auto';
+  clearPendingAttachments();
 
   isWaitingResponse = true;
   document.getElementById('btnSend').disabled = true;
@@ -2357,7 +2585,7 @@ async function sendMessage() {
   scrollChatToBottom();
 
   try {
-    const reply = await callGemini(text);
+    const reply = await callGemini(text, attachments);
     const { emotion, cleanText } = extractEmotion(reply);
     if (emotion) setCharExpression(emotion);
 
@@ -2462,6 +2690,16 @@ document.getElementById('chatInput').addEventListener('keydown', e => {
 document.getElementById('chatInput').addEventListener('input', e => {
   e.target.style.height = 'auto';
   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+});
+
+document.getElementById('btnAttach').addEventListener('click', () => {
+  document.getElementById('inputAttach').click();
+});
+document.getElementById('inputAttach').addEventListener('change', async e => {
+  const files = e.target.files ? Array.from(e.target.files) : [];
+  e.target.value = '';
+  if (files.length === 0) return;
+  await addAttachmentFiles(files);
 });
 
 document.getElementById('btnOpenCharSelect').addEventListener('click', openCharSelectModal);
