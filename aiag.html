@@ -3897,6 +3897,81 @@ function addNewsFeedback(direction, item) {
   saveNewsFeedback(fb);
 }
 
+async function generateNewsSearchQueries(interests, fb) {
+  const today = todayStr();
+  const interestBlock = interests
+    ? '【ユーザーの興味・関心】\n' + interests
+    : '【ユーザーの興味・関心】未登録(日本で広く話題のテーマから検索してください)';
+  const upBlock = fb.up.length > 0
+    ? '\n\n【👍評価された話題(似た方向のクエリも入れる)】\n'
+      + fb.up.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n')
+    : '';
+  const downBlock = fb.down.length > 0
+    ? '\n\n【👎評価された話題(類似するクエリは入れない)】\n'
+      + fb.down.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n')
+    : '';
+  const prompt =
+    interestBlock + upBlock + downBlock + '\n\n' +
+    '今日は ' + today + ' です。\n\n' +
+    '上記をふまえ、Web ニュース検索のための **具体的な検索クエリ** を 7〜10 個生成してください。\n\n' +
+    '【ルール】\n' +
+    '- 抽象語ではなく具体名(固有名詞・人名・チーム名・商品名・地域名など)を使う。例: 「バスケ」より「NBA ゴールデンステートウォリアーズ 試合」「カリー 怪我」など\n' +
+    '- 興味カテゴリにバランスよく分散させる(同分野ばかりにしない)\n' +
+    '- 直近 1〜3 日以内に動きのありそうな話題を優先(時事性のあるクエリ)\n' +
+    '- 👎評価と類似する方向のクエリは入れない\n' +
+    '- 各クエリは 1〜4 単語程度、日本語で\n\n' +
+    '出力は JSON 配列のみ(説明・コードブロック禁止):\n' +
+    '[\n' +
+    '  { "query": "検索クエリ", "topic": "短いトピック名(1〜6文字)", "topicEmoji": "絵文字1つ" }\n' +
+    ']';
+  const { text } = await callGeminiSimple(prompt, false, { maxOutputTokens: 4096, temperature: 0.6 });
+  const arr = parseJsonFromText(text);
+  if (!Array.isArray(arr)) throw new Error('クエリ生成の応答が配列ではない');
+  return arr.slice(0, 12).map(q => ({
+    query: String(q.query || '').trim(),
+    topic: String(q.topic || '').trim(),
+    topicEmoji: String(q.topicEmoji || '').trim()
+  })).filter(q => q.query);
+}
+
+async function fetchNewsByQueries(queries, seen, fb) {
+  const today = todayStr();
+  const queryList = queries.map(q =>
+    '- ' + (q.topicEmoji ? q.topicEmoji + ' ' : '') + (q.topic ? '[' + q.topic + '] ' : '') + q.query
+  ).join('\n');
+  const seenSection = seen.length > 0
+    ? '\n\n【すでに見せたニュース見出し(同じ話題・似た話題は避ける)】\n'
+      + seen.slice(0, 40).map(s => '- ' + s).join('\n')
+    : '';
+  const downSection = fb.down.length > 0
+    ? '\n\n【👎評価された話題(類似は出さない)】\n'
+      + fb.down.slice(0, 10).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n')
+    : '';
+  const prompt =
+    '今日は ' + today + ' です。\n\n' +
+    '【検索したいクエリ一覧】\n' + queryList + '\n\n' +
+    '上記のクエリを Web 検索して、ニュース性の高い記事を **5 件** 選んで JSON で返してください。' +
+    seenSection + downSection + '\n\n' +
+    '【選定ルール】\n' +
+    '- 直近 1〜3 日以内のニュースを優先。1 週間以上前のまとめ記事は除外\n' +
+    '- 同じトピック(topic)は最大 2 件まで。複数のクエリ結果からバランスよく選ぶ\n' +
+    '- 既に見せた見出し・👎話題と類似する記事は出さない\n' +
+    '- url は実在のものを記載(クエリで検索した結果のページ URL)\n\n' +
+    '出力は JSON 配列のみ(説明・コードブロック禁止):\n' +
+    '[\n' +
+    '  {\n' +
+    '    "title": "ヘッドライン(40文字以内)",\n' +
+    '    "summary": "1〜2行の要約(80文字以内)",\n' +
+    '    "url": "ソース記事の URL",\n' +
+    '    "query": "X や Google で深掘りするための 1〜3 単語の検索キーワード",\n' +
+    '    "topic": "短いトピック名(1〜6文字)",\n' +
+    '    "topicEmoji": "絵文字1つ"\n' +
+    '  }\n' +
+    ']';
+  const { text, sources } = await callGeminiSimple(prompt, true, { maxOutputTokens: 16384, temperature: 0.4 });
+  return { text, sources };
+}
+
 async function loadNews(force) {
   const cache = readMainCache('news');
   if (!force && isFresh(cache, MAIN_TTL.news)) return cache;
@@ -3907,51 +3982,44 @@ async function loadNews(force) {
   renderNews();
   try {
     const interests = buildInterestText();
-    const interestSection = interests
-      ? '【ユーザーの興味・関心】\n' + interests + '\n\n'
-      : '【ユーザーの興味・関心】未登録(一般的な日本のトレンドから選んでください)\n\n';
     const seen = loadNewsSeen();
-    const seenSection = seen.length > 0
-      ? '【すでにユーザーに見せたニュース見出し(同じ話題は出さない、似た話題も避ける)】\n'
-        + seen.slice(0, 40).map(s => '- ' + s).join('\n') + '\n\n'
-      : '';
     const fb = loadNewsFeedback();
-    const upSection = fb.up.length > 0
-      ? '【ユーザーが「興味あり 👍」と評価した話題(似た方向性のニュースを優先的に選ぶ)】\n'
-        + fb.up.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
-      : '';
-    const downSection = fb.down.length > 0
-      ? '【ユーザーが「興味なし 👎」と評価した話題(同じトピック・同じ方向性のニュースは避ける)】\n'
-        + fb.down.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
-      : '';
-    const todayStrLocal = todayStr();
-    const prompt =
-      interestSection +
-      seenSection +
-      upSection +
-      downSection +
-      '今日は ' + todayStrLocal + ' です。\n' +
-      '直近 1〜3 日以内に X (旧 Twitter) や Web で話題になっている動きのある話題のうち、上記のユーザーの興味に関連するものを 5 件選んでください。\n\n' +
-      '【選定ルール】\n' +
-      '- 1 週間以上前のまとめ記事や古いトピックは避け、まさに今動いているニュースを優先する\n' +
-      '- ユーザー興味と直接関連が薄ければ、関連性の高いものを優先しつつ最後の 1〜2 件は日本で広く話題のニュースで補ってよい\n' +
-      '- 同じトピック(topic)に偏らないこと: 1 つのトピックは最大 2 件まで(できるだけ別々のトピックにばらけさせる)\n' +
-      '- すでに見せた話題、興味なし評価された話題と類似するものは出さない\n' +
-      '- 興味あり評価された話題と近い方向性のニュースは積極的に取り上げる\n\n' +
-      '以下の JSON 配列のみで出力してください(コードブロックや説明文は禁止):\n' +
-      '[\n' +
-      '  {\n' +
-      '    "title": "ヘッドライン(40文字以内)",\n' +
-      '    "summary": "1〜2行の要約(80文字以内)",\n' +
-      '    "url": "ソース記事の URL(無ければ空文字)",\n' +
-      '    "query": "X や Google で深掘りするための 1〜3 単語の検索キーワード(日本語可)",\n' +
-      '    "topic": "この記事がどのテーマで選ばれたか(例: AI / バスケ / アニメ / 鉄道 / 政治 / スポーツ / 音楽 / ゲーム / 経済 / 一般 など。短い名詞 1〜6 文字)",\n' +
-      '    "topicEmoji": "そのテーマを表す絵文字を 1 つ(例: 🤖 🏀 📺 🚃 🏛 ⚽ 🎵 🎮 💴 📰)"\n' +
-      '  }\n' +
-      ']\n\n' +
-      '- url は実在のものを記載\n' +
-      '- topic はユーザー興味との関連が分かる名前にする(該当なしなら「一般」)';
-    const { text, sources } = await callGeminiSimple(prompt, true, { maxOutputTokens: 16384, temperature: 0.5 });
+    let resp;
+    let usedQueries = [];
+    try {
+      const queries = await generateNewsSearchQueries(interests, fb);
+      if (queries.length === 0) throw new Error('クエリが空');
+      usedQueries = queries;
+      resp = await fetchNewsByQueries(queries, seen, fb);
+    } catch (qerr) {
+      console.warn('Phase2 query gen failed, falling back to single-call:', qerr);
+      const interestSection = interests
+        ? '【ユーザーの興味・関心】\n' + interests + '\n\n'
+        : '【ユーザーの興味・関心】未登録(一般的な日本のトレンドから選んでください)\n\n';
+      const seenSection = seen.length > 0
+        ? '【すでにユーザーに見せたニュース見出し(同じ話題は出さない、似た話題も避ける)】\n'
+          + seen.slice(0, 40).map(s => '- ' + s).join('\n') + '\n\n'
+        : '';
+      const upSection = fb.up.length > 0
+        ? '【ユーザーが「興味あり 👍」と評価した話題】\n'
+          + fb.up.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
+        : '';
+      const downSection = fb.down.length > 0
+        ? '【ユーザーが「興味なし 👎」と評価した話題】\n'
+          + fb.down.slice(0, 15).map(x => '- ' + (x.topic ? '[' + x.topic + '] ' : '') + x.title).join('\n') + '\n\n'
+        : '';
+      const today = todayStr();
+      const fallbackPrompt =
+        interestSection + seenSection + upSection + downSection +
+        '今日は ' + today + ' です。\n' +
+        '直近 1〜3 日以内に X や Web で話題になっている動きのある話題のうち、ユーザー興味に関連するものを 5 件選んでください。\n\n' +
+        '【ルール】\n' +
+        '- 1 週間以上前の話題は避ける\n- 同じ topic は最大 2 件\n- 既出/👎 と類似する話題は出さない\n\n' +
+        '出力は JSON 配列のみ:\n[ { "title": "...", "summary": "...", "url": "...", "query": "...", "topic": "...", "topicEmoji": "..." } ]';
+      resp = await callGeminiSimple(fallbackPrompt, true, { maxOutputTokens: 16384, temperature: 0.5 });
+    }
+    const text = resp.text;
+    const sources = resp.sources || [];
     let arr;
     try {
       arr = parseJsonFromText(text);
