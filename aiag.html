@@ -481,17 +481,7 @@ body.bg-cage .timestamp {
   z-index: 10;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
-.bottom-fade {
-  display: none;
-  position: fixed;
-  left: 0; right: 0;
-  bottom: calc(60px + env(safe-area-inset-bottom));
-  height: 80px;
-  background: linear-gradient(to bottom, rgba(255, 250, 240, 0) 0%, rgba(255, 250, 240, 0.7) 60%, rgba(255, 250, 240, 0.98) 100%);
-  pointer-events: none;
-  z-index: 7;
-}
-body.on-main .bottom-fade { display: block; }
+.bottom-fade { display: none; }
 @media (prefers-color-scheme: dark) {
   .bottom-fade {
     background: linear-gradient(to bottom, rgba(28, 28, 30, 0) 0%, rgba(28, 28, 30, 0.7) 60%, rgba(28, 28, 30, 0.98) 100%);
@@ -862,11 +852,10 @@ body.on-main .bottom-fade { display: block; }
   font-size: 14px;
 }
 .main-content {
-  padding: 8px 16px calc(60px + 70px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(60px + 140px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: calc(100dvh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 .main-logo {
   position: relative;
