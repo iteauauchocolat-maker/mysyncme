@@ -870,6 +870,8 @@ body.bg-cage .timestamp {
           <input type="text" id="inputRouteAdd" placeholder="例: JR山手線">
           <button class="route-add-btn" id="btnAddRoute" type="button">追加</button>
         </div>
+        <div style="height: 12px;"></div>
+        <button class="btn btn-secondary" id="btnCheckDelays">📡 運行状況をチェック</button>
       </div>
 
       <div class="section">
@@ -1010,6 +1012,18 @@ body.bg-cage .timestamp {
     <h3>キャラクター選択</h3>
     <div id="charCardList"></div>
     <button class="btn btn-secondary" id="btnCloseCharSelect" style="margin-top:8px;">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delayModal">
+  <div class="modal">
+    <h3>運行状況</h3>
+    <div id="delayContent" style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; max-height: 50vh; overflow-y: auto; color: var(--text);"></div>
+    <div id="delaySources" style="margin-top: 12px; font-size: 12px; color: var(--text-sub);"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnRefreshDelays">再取得</button>
+      <button class="btn" id="btnCloseDelay">閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -1995,6 +2009,87 @@ function addRouteFromInput() {
   showToast('追加しました', 'success');
 }
 
+let isCheckingDelay = false;
+async function checkRouteDelays() {
+  if (isCheckingDelay) return;
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  if (!Array.isArray(profile.routes) || profile.routes.length === 0) {
+    showToast('路線を登録してください', 'error');
+    return;
+  }
+  const btn = document.getElementById('btnCheckDelays');
+  const orig = btn.textContent;
+  isCheckingDelay = true;
+  btn.disabled = true;
+  btn.textContent = '確認中...';
+  // モーダルは先に開いてローディングを表示
+  document.getElementById('delayContent').textContent = '取得中…';
+  document.getElementById('delaySources').textContent = '';
+  document.getElementById('delayModal').classList.add('show');
+  try {
+    const routes = profile.routes;
+    const prompt =
+      '以下の路線について、現在の運行状況(遅延・運休・通常運転)を Web で検索して教えてください。\n\n' +
+      '路線:\n' + routes.map(r => '- ' + r).join('\n') + '\n\n' +
+      '形式:\n' +
+      '- 各路線について「路線名: 状況」を 1 行ずつ\n' +
+      '- 状況の例: 通常運転 / 〇分遅れ / 運休 / 一部運休 など\n' +
+      '- 遅延・運休があれば理由を 1 行で簡潔に補足\n' +
+      '- 最後に「取得時刻: YYYY-MM-DD HH:MM」を入れる\n' +
+      '- 詳細な説明や前置きは不要';
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+      + encodeURIComponent(settings.model)
+      + ':generateContent?key=' + encodeURIComponent(settings.apiKey);
+    const body = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+    };
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
+      try {
+        const ed = await resp.json();
+        if (ed.error && ed.error.message) errMsg = ed.error.message;
+      } catch {}
+      throw new Error(errMsg);
+    }
+    const data = await resp.json();
+    const cand = data.candidates && data.candidates[0];
+    if (!cand) throw new Error('AIから応答がありませんでした');
+    const ps = cand.content && cand.content.parts;
+    const raw = ps ? ps.map(p => p.text || '').join('').trim() : '';
+    if (!raw) throw new Error('応答が空でした');
+    document.getElementById('delayContent').textContent = raw;
+    // 引用元(あれば)を表示
+    const gm = cand.groundingMetadata;
+    if (gm && Array.isArray(gm.groundingChunks)) {
+      const sources = gm.groundingChunks
+        .map(c => c.web && c.web.uri ? (c.web.title || c.web.uri) : null)
+        .filter(Boolean)
+        .slice(0, 5);
+      if (sources.length > 0) {
+        document.getElementById('delaySources').textContent = '参考: ' + sources.join(' / ');
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    document.getElementById('delayContent').textContent = '取得に失敗しました\n\n' + String(e.message || e);
+  } finally {
+    isCheckingDelay = false;
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
 function openProfileItemModal(catId, index) {
   editingProfileItem = { catId, index };
   const cat = PROFILE_CATEGORIES.find(c => c.id === catId);
@@ -2675,6 +2770,17 @@ document.getElementById('inputRouteAdd').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     e.preventDefault();
     addRouteFromInput();
+  }
+});
+
+document.getElementById('btnCheckDelays').addEventListener('click', checkRouteDelays);
+document.getElementById('btnRefreshDelays').addEventListener('click', checkRouteDelays);
+document.getElementById('btnCloseDelay').addEventListener('click', () => {
+  document.getElementById('delayModal').classList.remove('show');
+});
+document.getElementById('delayModal').addEventListener('click', e => {
+  if (e.target.id === 'delayModal') {
+    document.getElementById('delayModal').classList.remove('show');
   }
 });
 
