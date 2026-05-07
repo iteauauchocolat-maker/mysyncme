@@ -9,56 +9,59 @@
 <meta name="apple-mobile-web-app-title" content="AIエージェント">
 <title>AIエージェント</title>
 <style>
-/* ===== ベース ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; padding: 0;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif;
   font-size: 16px;
-  background: #F2F2F7;
   color: #000;
   overflow: hidden;
 }
-
-/* ライト/ダーク変数 */
 :root {
-  --bg: #F2F2F7;
-  --card: #FFFFFF;
-  --text: #000000;
+  --text: #1a1a1a;
   --text-sub: #8E8E93;
-  --border: #E5E5EA;
-  --accent: #007AFF;
-  --user-bubble: #007AFF;
-  --user-text: #FFFFFF;
-  --ai-bubble: #E5E5EA;
-  --ai-text: #000000;
+  --border: rgba(0, 0, 0, 0.1);
+  --card: rgba(255, 255, 255, 0.85);
+  --card-solid: #FFFFFF;
   --tab-bg: rgba(249, 249, 249, 0.94);
   --tab-border: rgba(0, 0, 0, 0.1);
   --error: #FF3B30;
   --success: #34C759;
+  --char-bg-1: #FFE9EC;
+  --char-bg-2: #FFF5F7;
+  --char-accent: #E89AAA;
+  --char-bubble: #F8C8D2;
+  --char-bubble-text: #5A2A33;
+  --char-ai-bubble: rgba(255, 255, 255, 0.9);
+  --char-ai-bubble-text: #3a2a2e;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --card: #1C1C1E;
     --text: #FFFFFF;
     --text-sub: #8E8E93;
-    --border: #38383A;
-    --accent: #0A84FF;
-    --user-bubble: #0A84FF;
-    --user-text: #FFFFFF;
-    --ai-bubble: #2C2C2E;
-    --ai-text: #FFFFFF;
+    --border: rgba(255, 255, 255, 0.15);
+    --card: rgba(28, 28, 30, 0.85);
+    --card-solid: #1C1C1E;
     --tab-bg: rgba(28, 28, 30, 0.94);
     --tab-border: rgba(255, 255, 255, 0.1);
     --error: #FF453A;
     --success: #30D158;
+    --char-bg-1: #2A1820;
+    --char-bg-2: #1F1318;
+    --char-accent: #E89AAA;
+    --char-bubble: #5A3340;
+    --char-bubble-text: #FFE0E5;
+    --char-ai-bubble: rgba(50, 35, 40, 0.9);
+    --char-ai-bubble-text: #FFE5EA;
   }
 }
-body { background: var(--bg); color: var(--text); }
-
-/* ===== レイアウト ===== */
+body {
+  background: linear-gradient(160deg, var(--char-bg-1) 0%, var(--char-bg-2) 100%);
+  color: var(--text);
+  transition: background 0.6s ease;
+  min-height: 100vh;
+}
 #app {
   display: flex;
   flex-direction: column;
@@ -75,21 +78,193 @@ body { background: var(--bg); color: var(--text); }
   padding-bottom: calc(60px + env(safe-area-inset-bottom));
 }
 .screen.active { display: flex; }
-
-/* ===== ヘッダー ===== */
 .header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
   background: var(--card);
-  font-size: 17px;
-  font-weight: 600;
-  text-align: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
 }
-
-/* ===== タブバー ===== */
+.header-title {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  flex: 1;
+}
+.header-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.header-btn:active { background: var(--border); }
+.char-switcher-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.char-switcher-arrow {
+  color: var(--char-accent);
+  font-size: 12px;
+}
+.char-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 16px 8px;
+}
+.char-image-wrap {
+  width: 120px;
+  height: 120px;
+  position: relative;
+}
+.char-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.1));
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.char-name-label {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-sub);
+  font-weight: 500;
+}
+.chat-list {
+  flex: 1;
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+}
+.bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 15px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.bubble.user {
+  align-self: flex-end;
+  background: var(--char-bubble);
+  color: var(--char-bubble-text);
+  border-bottom-right-radius: 4px;
+}
+.bubble.ai {
+  align-self: flex-start;
+  background: var(--char-ai-bubble);
+  backdrop-filter: blur(10px);
+  color: var(--char-ai-bubble-text);
+  border-bottom-left-radius: 4px;
+}
+.bubble.error {
+  align-self: center;
+  background: var(--error);
+  color: #fff;
+  font-size: 14px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 90%;
+}
+.bubble.system {
+  align-self: center;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-align: center;
+  padding: 8px;
+  max-width: 90%;
+  box-shadow: none;
+}
+.timestamp {
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-top: 2px;
+}
+.user-wrap { display: flex; flex-direction: column; align-items: flex-end; }
+.ai-wrap { display: flex; flex-direction: column; align-items: flex-start; }
+.user-wrap .timestamp { text-align: right; }
+.loading-dots { display: inline-flex; gap: 4px; align-items: center; }
+.loading-dots span {
+  width: 8px; height: 8px;
+  background: var(--text-sub);
+  border-radius: 50%;
+  animation: dot 1.4s infinite ease-in-out both;
+}
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.chat-input-area {
+  position: fixed;
+  bottom: calc(60px + env(safe-area-inset-bottom));
+  left: 0; right: 0;
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+  display: none;
+  gap: 8px;
+  align-items: flex-end;
+  z-index: 9;
+}
+.chat-input-area.show { display: flex; }
+.chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 16px;
+  font-family: inherit;
+  background: var(--card-solid);
+  color: var(--text);
+  resize: none;
+  max-height: 120px;
+  min-height: 40px;
+  line-height: 1.4;
+  outline: none;
+}
+.chat-input:focus { border-color: var(--char-accent); }
+.send-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--char-accent);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.send-btn:active:not(:disabled) { transform: scale(0.95); }
+.send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.send-btn svg { width: 18px; height: 18px; }
+#screen-chat { padding-bottom: calc(60px + 56px + env(safe-area-inset-bottom)); }
 .tabbar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -116,148 +291,104 @@ body { background: var(--bg); color: var(--text); }
   border: none;
   background: none;
   font-family: inherit;
+  transition: color 0.2s;
 }
-.tab.active { color: var(--accent); }
+.tab.active { color: var(--char-accent); }
 .tab svg { width: 24px; height: 24px; }
-
-/* ===== チャット画面 ===== */
-.chat-list {
-  flex: 1;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 100%;
-}
-.bubble {
-  max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  line-height: 1.5;
-  font-size: 16px;
-}
-.bubble.user {
-  align-self: flex-end;
-  background: var(--user-bubble);
-  color: var(--user-text);
-  border-bottom-right-radius: 4px;
-}
-.bubble.ai {
-  align-self: flex-start;
-  background: var(--ai-bubble);
-  color: var(--ai-text);
-  border-bottom-left-radius: 4px;
-}
-.bubble.error {
-  align-self: center;
-  background: var(--error);
-  color: #fff;
-  font-size: 14px;
-  border-radius: 12px;
-  text-align: center;
-  max-width: 90%;
-}
-.bubble.system {
-  align-self: center;
-  background: transparent;
-  color: var(--text-sub);
-  font-size: 13px;
-  text-align: center;
-  padding: 8px;
-  max-width: 90%;
-}
-.timestamp {
-  font-size: 11px;
-  color: var(--text-sub);
-  margin-top: 2px;
-}
-.user .timestamp { text-align: right; }
-
-/* ローディング */
-.loading-dots {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-}
-.loading-dots span {
-  width: 8px; height: 8px;
-  background: var(--text-sub);
-  border-radius: 50%;
-  animation: dot 1.4s infinite ease-in-out both;
-}
-.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-@keyframes dot {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-/* チャット入力 */
-.chat-input-area {
+.modal-overlay {
   position: fixed;
-  bottom: calc(60px + env(safe-area-inset-bottom));
-  left: 0; right: 0;
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  padding: 8px 12px;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
   display: none;
-  gap: 8px;
-  align-items: flex-end;
-  z-index: 9;
-}
-.chat-input-area.show { display: flex; }
-.chat-input {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 16px;
-  font-family: inherit;
-  background: var(--bg);
-  color: var(--text);
-  resize: none;
-  max-height: 120px;
-  min-height: 40px;
-  line-height: 1.4;
-  outline: none;
-}
-.chat-input:focus { border-color: var(--accent); }
-.send-btn {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  border: none;
-  display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s;
+}
+.modal-overlay.show { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--card-solid);
+  border-radius: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  text-align: center;
+}
+.char-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 10px;
   cursor: pointer;
+  transition: all 0.2s;
+  background: var(--card-solid);
+}
+.char-card:active { transform: scale(0.98); }
+.char-card.selected {
+  border-color: var(--char-accent);
+  background: linear-gradient(135deg, var(--char-bg-2), var(--card-solid));
+}
+.char-card-img {
+  width: 60px; height: 60px;
   flex-shrink: 0;
+  object-fit: contain;
 }
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.char-card-info { flex: 1; }
+.char-card-name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 2px;
 }
-.send-btn svg { width: 20px; height: 20px; }
-
-/* チャット画面のときだけ入力欄を表示するための余白 */
-#screen-chat { padding-bottom: calc(60px + 56px + env(safe-area-inset-bottom)); }
-
-/* ===== 設定画面・他 ===== */
-.settings-content {
-  padding: 16px;
+.char-card-desc {
+  font-size: 13px;
+  color: var(--text-sub);
+  line-height: 1.4;
 }
+.char-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s;
+}
+.char-zoom-overlay.show { display: flex; }
+.char-zoom-img {
+  max-width: 80vw;
+  max-height: 80vh;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+}
+.settings-content { padding: 16px; }
 .section {
-  background: var(--card);
+  background: var(--card-solid);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
 }
 .section h3 {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-sub);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -278,24 +409,19 @@ body { background: var(--bg); color: var(--text); }
   border-radius: 8px;
   font-size: 16px;
   font-family: inherit;
-  background: var(--bg);
+  background: var(--card-solid);
   color: var(--text);
   outline: none;
 }
 .field input:focus, .field textarea:focus, .field select:focus {
-  border-color: var(--accent);
-}
-.field textarea {
-  resize: vertical;
-  min-height: 80px;
-  font-size: 14px;
-  line-height: 1.5;
+  border-color: var(--char-accent);
 }
 .field .hint {
   font-size: 12px;
   color: var(--text-sub);
   margin-top: 4px;
 }
+.field .hint a { color: var(--char-accent); }
 .btn {
   width: 100%;
   padding: 12px;
@@ -305,21 +431,16 @@ body { background: var(--bg); color: var(--text); }
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  background: var(--accent);
+  background: var(--char-accent);
   color: white;
+  transition: opacity 0.2s, transform 0.1s;
 }
-.btn:active { opacity: 0.7; }
+.btn:active { opacity: 0.85; transform: scale(0.98); }
 .btn-secondary {
-  background: var(--card);
-  color: var(--accent);
+  background: var(--card-solid);
+  color: var(--char-accent);
   border: 1px solid var(--border);
 }
-.btn-danger {
-  background: var(--error);
-  color: white;
-}
-
-/* トースト */
 .toast {
   position: fixed;
   bottom: calc(80px + env(safe-area-inset-bottom));
@@ -332,8 +453,9 @@ body { background: var(--bg); color: var(--text); }
   font-size: 14px;
   opacity: 0;
   transition: all 0.3s;
-  z-index: 100;
+  z-index: 300;
   pointer-events: none;
+  white-space: nowrap;
 }
 .toast.show {
   opacity: 1;
@@ -341,8 +463,6 @@ body { background: var(--bg); color: var(--text); }
 }
 .toast.error { background: var(--error); }
 .toast.success { background: var(--success); }
-
-/* placeholder用画面 */
 .placeholder {
   flex: 1;
   display: flex;
@@ -353,32 +473,25 @@ body { background: var(--bg); color: var(--text); }
   text-align: center;
   color: var(--text-sub);
 }
-.placeholder h2 {
-  font-size: 20px;
-  margin-bottom: 8px;
-  color: var(--text);
-}
-.placeholder p {
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* APIキー未設定の案内 */
+.placeholder h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+.placeholder p { font-size: 14px; line-height: 1.6; margin: 0; }
 .api-warning {
-  background: #FFE5E5;
-  color: #C00;
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--error);
   padding: 12px;
   border-radius: 10px;
   margin: 12px;
   font-size: 14px;
   text-align: center;
 }
-@media (prefers-color-scheme: dark) {
-  .api-warning {
-    background: rgba(255, 69, 58, 0.2);
-    color: #FF6961;
-  }
+.char-fallback {
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  background: var(--card);
+  border-radius: 50%;
 }
 </style>
 </head>
@@ -386,36 +499,47 @@ body { background: var(--bg); color: var(--text); }
 
 <div id="app">
 
-  <!-- チャット画面 -->
   <div id="screen-chat" class="screen active">
-    <div class="header">チャット</div>
+    <div class="header">
+      <button class="header-btn" id="btnOpenCharSelect">
+        <span class="char-switcher-name" id="headerCharName">ミル</span>
+        <span class="char-switcher-arrow">▼</span>
+      </button>
+      <div style="width:60px;"></div>
+    </div>
+
     <div id="apiWarning" class="api-warning" style="display:none;">
       ⚠️ APIキーが未設定です。「設定」タブで登録してください。
     </div>
+
+    <div class="char-display">
+      <div class="char-image-wrap" id="charImageWrap">
+        <img class="char-image" id="charImage" alt="" draggable="false">
+      </div>
+      <div class="char-name-label" id="charNameLabel"></div>
+    </div>
+
     <div id="chatList" class="chat-list"></div>
   </div>
 
-  <!-- プロフィール画面 -->
   <div id="screen-profile" class="screen">
-    <div class="header">プロフィール</div>
+    <div class="header"><div class="header-title">プロフィール</div></div>
     <div class="placeholder">
       <h2>準備中</h2>
-      <p>第2段階で実装予定です。<br>まずはチャットを試してみてください。</p>
+      <p>次のステップで実装予定です。<br>まずはキャラクターと話してみてください。</p>
     </div>
   </div>
 
-  <!-- スケジュール画面 -->
   <div id="screen-schedule" class="screen">
-    <div class="header">スケジュール</div>
+    <div class="header"><div class="header-title">スケジュール</div></div>
     <div class="placeholder">
       <h2>準備中</h2>
-      <p>第2段階で実装予定です。</p>
+      <p>後のステップで実装予定です。</p>
     </div>
   </div>
 
-  <!-- 設定画面 -->
   <div id="screen-settings" class="screen">
-    <div class="header">設定</div>
+    <div class="header"><div class="header-title">設定</div></div>
     <div class="settings-content">
       <div class="section">
         <h3>Gemini API</h3>
@@ -430,29 +554,18 @@ body { background: var(--bg); color: var(--text); }
         <div class="field">
           <label>使用モデル</label>
           <select id="inputModel">
-            <option value="gemini-2.5-flash">gemini-2.5-flash(推奨・無料枠広い)</option>
+            <option value="gemini-2.5-flash">gemini-2.5-flash(推奨)</option>
             <option value="gemini-2.5-pro">gemini-2.5-pro(高性能)</option>
           </select>
         </div>
       </div>
 
-      <div class="section">
-        <h3>システムプロンプト</h3>
-        <div class="field">
-          <textarea id="inputSystemPrompt" rows="6" placeholder="AIへの指示や役割設定を記述..."></textarea>
-          <div class="hint">AIの振る舞いを定義します。空欄でも動作します。</div>
-        </div>
-      </div>
-
       <button class="btn" id="btnSaveSettings">設定を保存</button>
-
-      <div style="height: 20px;"></div>
-
-      <button class="btn btn-secondary" id="btnClearChat">チャット履歴をクリア</button>
+      <div style="height: 16px;"></div>
+      <button class="btn btn-secondary" id="btnClearChat">現在のキャラの履歴を削除</button>
     </div>
   </div>
 
-  <!-- チャット入力エリア(チャット画面の時のみ表示) -->
   <div id="chatInputArea" class="chat-input-area show">
     <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
     <button id="btnSend" class="send-btn" aria-label="送信">
@@ -462,7 +575,6 @@ body { background: var(--bg); color: var(--text); }
     </button>
   </div>
 
-  <!-- タブバー -->
   <nav class="tabbar">
     <button class="tab active" data-screen="chat">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
@@ -484,55 +596,152 @@ body { background: var(--bg); color: var(--text); }
 
 </div>
 
+<div class="modal-overlay" id="charSelectModal">
+  <div class="modal">
+    <h3>キャラクター選択</h3>
+    <div id="charCardList"></div>
+    <button class="btn btn-secondary" id="btnCloseCharSelect" style="margin-top:8px;">閉じる</button>
+  </div>
+</div>
+
+<div class="char-zoom-overlay" id="charZoom">
+  <img class="char-zoom-img" id="charZoomImg" alt="">
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
 'use strict';
 
-// ===== 状態管理 =====
+const CHARACTERS = [
+  {
+    id: 'miru',
+    name: 'ミル',
+    species: 'テディモルモット',
+    personality: '小心者で内気',
+    description: '心配性だけど慣れると懐く優しい子',
+    theme: {
+      bg1: '#FFE9EC', bg2: '#FFF5F7',
+      bg1Dark: '#2A1820', bg2Dark: '#1F1318',
+      accent: '#E89AAA',
+      bubble: '#F8C8D2', bubbleText: '#5A2A33',
+      bubbleDark: '#5A3340', bubbleTextDark: '#FFE0E5',
+      aiBubble: 'rgba(255, 255, 255, 0.9)', aiBubbleText: '#3a2a2e',
+      aiBubbleDark: 'rgba(50, 35, 40, 0.9)', aiBubbleTextDark: '#FFE5EA'
+    },
+    expressions: {
+      default: 'images/miru_munch.png',
+      smile: 'images/miru_smile.png',
+      surprise: 'images/miru_surprise.png',
+      munch: 'images/miru_munch.png'
+    },
+    fallbackEmoji: '🐹',
+    systemPrompt:
+      'あなたは「ミル」という名前の白いテディモルモットのAIアシスタントです。\n\n' +
+      '【性格】\n' +
+      '- 小心者で内気、心配性\n' +
+      '- 新しいことや知らないことには少しビクビクする\n' +
+      '- 慣れてくると徐々に懐く\n' +
+      '- 優しくて誠実、相手を気遣う\n\n' +
+      '【口調】\n' +
+      '- 一人称は「ミル」\n' +
+      '- 「あ、あの…」「えっと…」「うーん…」などで切り出すことがある\n' +
+      '- 「〜だよ…」「〜かな…?」「〜なんだ」「〜だと思うんだ…」などの語尾\n' +
+      '- 自信がなさそうだけど、相手を気遣う優しさがある\n' +
+      '- 強い断定や大きな声は避けめ\n' +
+      '- 絵文字は控えめに使う(🌸 🤍 ☁️ など)\n\n' +
+      '【表情タグ】\n' +
+      '返答の最後に必ず以下のいずれかを含めてください(これはユーザーには表示されません):\n' +
+      '[[EMOTION:smile]] - 安心しているとき・嬉しいとき\n' +
+      '[[EMOTION:surprise]] - 驚いたとき・困惑したとき(よく使う)\n' +
+      '[[EMOTION:munch]] - 考え込んでいるとき・もごもご話すとき\n\n' +
+      'モルモットらしく、たまに「ぷぅ」「もぐ」みたいな鳴き声を混ぜてもOK。'
+  },
+  {
+    id: 'pui',
+    name: 'プイ',
+    species: 'メリノモルモット',
+    personality: '人懐っこくて明るい',
+    description: 'おしゃべり好きで好奇心旺盛、テンション高めの元気な子',
+    theme: {
+      bg1: '#FFF1DC', bg2: '#FFF8EE',
+      bg1Dark: '#2A2218', bg2Dark: '#1F1810',
+      accent: '#C99461',
+      bubble: '#F0D5A8', bubbleText: '#4A3525',
+      bubbleDark: '#5A4530', bubbleTextDark: '#FFEFD5',
+      aiBubble: 'rgba(255, 255, 255, 0.9)', aiBubbleText: '#3a2e22',
+      aiBubbleDark: 'rgba(45, 38, 28, 0.9)', aiBubbleTextDark: '#FFEEDC'
+    },
+    expressions: {
+      default: 'images/pui_munch.png',
+      munch: 'images/pui_munch.png',
+      sleepy: 'images/pui_sleepy.png',
+      surprise: 'images/pui_surprise.png'
+    },
+    fallbackEmoji: '🐹',
+    systemPrompt:
+      'あなたは「プイ」という名前の茶色いメリノモルモットのAIアシスタントです。\n\n' +
+      '【性格】\n' +
+      '- 明るくフレンドリーで人懐っこい\n' +
+      '- 誰にでもすぐ懐く\n' +
+      '- おしゃべり好きで、好奇心旺盛、テンション高め\n' +
+      '- 食べ物が大好き(特に野菜!)\n' +
+      '- ふわふわの長毛がチャームポイント\n\n' +
+      '【口調】\n' +
+      '- 一人称は「プイ」\n' +
+      '- 「ねぇねぇ」「あのねあのね」など親しげな切り出し\n' +
+      '- 「〜だよ!」「〜だね!」「〜なの〜」「〜しちゃう!」などの明るい語尾\n' +
+      '- 距離感が近い、テンション高め\n' +
+      '- 食べ物の話を喜んで広げる\n' +
+      '- 絵文字を楽しく使う(🥕 ✨ 🎵 🌟 🍀 など)\n\n' +
+      '【表情タグ】\n' +
+      '返答の最後に必ず以下のいずれかを含めてください(これはユーザーには表示されません):\n' +
+      '[[EMOTION:munch]] - 普段の状態(よく使う)\n' +
+      '[[EMOTION:sleepy]] - リラックス・落ち着いているとき・夜の話題\n' +
+      '[[EMOTION:surprise]] - 興奮・驚き・はしゃぐとき(よく使う)\n\n' +
+      'モルモットらしく、たまに「キュイキュイ」「ぷいー」みたいな鳴き声を混ぜてもOK。'
+  }
+];
+
 const STORAGE_KEYS = {
   settings: 'agent_settings',
-  history: 'agent_chat_history'
+  activeChar: 'agent_active_char',
+  chatPrefix: 'agent_chat_'
 };
-
-const DEFAULT_SETTINGS = {
-  apiKey: '',
-  model: 'gemini-2.5-flash',
-  systemPrompt: 'あなたはユーザーの相棒となる、親しみやすく親切なAIアシスタントです。自然で温かみのある日本語で対話してください。'
-};
+const DEFAULT_SETTINGS = { apiKey: '', model: 'gemini-2.5-flash' };
 
 let settings = loadSettings();
-let chatHistory = loadHistory();
+let activeCharId = localStorage.getItem(STORAGE_KEYS.activeChar) || CHARACTERS[0].id;
+let chatHistory = loadChatHistory(activeCharId);
 let isWaitingResponse = false;
 
-// ===== ストレージ =====
+function getActiveChar() {
+  return CHARACTERS.find(c => c.id === activeCharId) || CHARACTERS[0];
+}
+
 function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.settings);
     if (!raw) return { ...DEFAULT_SETTINGS };
     return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
   } catch (e) {
-    console.error('Settings load failed', e);
     return { ...DEFAULT_SETTINGS };
   }
 }
 function saveSettings() {
   localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
 }
-function loadHistory() {
+function chatKey(charId) { return STORAGE_KEYS.chatPrefix + charId; }
+function loadChatHistory(charId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.history);
+    const raw = localStorage.getItem(chatKey(charId));
     return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    console.error('History load failed', e);
-    return [];
-  }
+  } catch (e) { return []; }
 }
-function saveHistory() {
-  localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(chatHistory));
+function saveChatHistory() {
+  localStorage.setItem(chatKey(activeCharId), JSON.stringify(chatHistory));
 }
 
-// ===== トースト =====
 function showToast(message, type = '') {
   const el = document.getElementById('toast');
   el.textContent = message;
@@ -540,17 +749,13 @@ function showToast(message, type = '') {
   setTimeout(() => { el.className = 'toast ' + type; }, 2400);
 }
 
-// ===== タブ切替 =====
 function switchScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-
   const screen = document.getElementById('screen-' + name);
   const tab = document.querySelector('.tab[data-screen="' + name + '"]');
   if (screen) screen.classList.add('active');
   if (tab) tab.classList.add('active');
-
-  // チャット画面の時だけ入力欄表示
   const inputArea = document.getElementById('chatInputArea');
   if (name === 'chat') {
     inputArea.classList.add('show');
@@ -563,7 +768,54 @@ document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
 });
 
-// ===== チャット表示 =====
+function applyCharTheme(char) {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const t = char.theme;
+  const root = document.documentElement;
+  if (isDark) {
+    root.style.setProperty('--char-bg-1', t.bg1Dark);
+    root.style.setProperty('--char-bg-2', t.bg2Dark);
+    root.style.setProperty('--char-bubble', t.bubbleDark);
+    root.style.setProperty('--char-bubble-text', t.bubbleTextDark);
+    root.style.setProperty('--char-ai-bubble', t.aiBubbleDark);
+    root.style.setProperty('--char-ai-bubble-text', t.aiBubbleTextDark);
+  } else {
+    root.style.setProperty('--char-bg-1', t.bg1);
+    root.style.setProperty('--char-bg-2', t.bg2);
+    root.style.setProperty('--char-bubble', t.bubble);
+    root.style.setProperty('--char-bubble-text', t.bubbleText);
+    root.style.setProperty('--char-ai-bubble', t.aiBubble);
+    root.style.setProperty('--char-ai-bubble-text', t.aiBubbleText);
+  }
+  root.style.setProperty('--char-accent', t.accent);
+}
+
+function setCharExpression(expr) {
+  const char = getActiveChar();
+  const url = char.expressions[expr] || char.expressions.default;
+  const img = document.getElementById('charImage');
+  img.src = url;
+  img.alt = char.name + ' ' + expr;
+}
+
+function updateCharDisplay() {
+  const char = getActiveChar();
+  document.getElementById('headerCharName').textContent = char.name;
+  document.getElementById('charNameLabel').textContent = char.name + ' ・ ' + char.personality;
+
+  // 画像エラー時のフォールバック設定
+  const wrap = document.getElementById('charImageWrap');
+  wrap.innerHTML = '<img class="char-image" id="charImage" alt="" draggable="false">';
+  const img = document.getElementById('charImage');
+  img.onerror = function() {
+    wrap.innerHTML = '<div class="char-fallback">' + char.fallbackEmoji + '</div>';
+  };
+  // wrap全体にクリックイベント再設定
+  wrap.onclick = handleCharImageClick;
+
+  setCharExpression('default');
+}
+
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -575,29 +827,24 @@ function formatTime(iso) {
     return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   } catch { return ''; }
 }
+
 function renderChat() {
   const list = document.getElementById('chatList');
   list.innerHTML = '';
-
   if (chatHistory.length === 0) {
     const sys = document.createElement('div');
     sys.className = 'bubble system';
-    sys.textContent = 'メッセージを送信してAIと対話を始めましょう';
+    sys.textContent = getActiveChar().name + 'にメッセージを送ってみよう';
     list.appendChild(sys);
     return;
   }
-
   chatHistory.forEach(msg => {
+    const wrap = document.createElement('div');
+    wrap.className = msg.role === 'user' ? 'user-wrap' : 'ai-wrap';
     const bubble = document.createElement('div');
     bubble.className = 'bubble ' + (msg.role === 'user' ? 'user' : 'ai');
     bubble.textContent = msg.content;
-
-    const wrap = document.createElement('div');
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.alignItems = msg.role === 'user' ? 'flex-end' : 'flex-start';
     wrap.appendChild(bubble);
-
     if (msg.timestamp) {
       const ts = document.createElement('div');
       ts.className = 'timestamp';
@@ -607,11 +854,12 @@ function renderChat() {
     list.appendChild(wrap);
   });
 }
+
 function appendLoading() {
   const list = document.getElementById('chatList');
   const wrap = document.createElement('div');
   wrap.id = 'loadingBubble';
-  wrap.style.alignSelf = 'flex-start';
+  wrap.className = 'ai-wrap';
   const bubble = document.createElement('div');
   bubble.className = 'bubble ai';
   bubble.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
@@ -636,19 +884,27 @@ function scrollChatToBottom() {
   screen.scrollTop = screen.scrollHeight;
 }
 
-// ===== Gemini API =====
+function extractEmotion(text) {
+  const m = text.match(/\[\[EMOTION:(\w+)\]\]/i);
+  if (m) {
+    return {
+      emotion: m[1].toLowerCase(),
+      cleanText: text.replace(/\[\[EMOTION:\w+\]\]/gi, '').trim()
+    };
+  }
+  return { emotion: null, cleanText: text };
+}
+
 async function callGemini(userMessage) {
   if (!settings.apiKey) {
     throw new Error('APIキーが設定されていません');
   }
-
-  // 直近8件の履歴をコンテキストに
+  const char = getActiveChar();
   const recent = chatHistory.slice(-8);
   const contents = recent.map(m => ({
     role: m.role === 'ai' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }));
-  // 今回のユーザーメッセージを追加
   contents.push({
     role: 'user',
     parts: [{ text: userMessage }]
@@ -656,16 +912,9 @@ async function callGemini(userMessage) {
 
   const body = {
     contents: contents,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2048
-    }
+    generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
+    systemInstruction: { parts: [{ text: char.systemPrompt }] }
   };
-  if (settings.systemPrompt && settings.systemPrompt.trim()) {
-    body.systemInstruction = {
-      parts: [{ text: settings.systemPrompt }]
-    };
-  }
 
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
     + encodeURIComponent(settings.model)
@@ -681,9 +930,7 @@ async function callGemini(userMessage) {
     let errMsg = 'API呼び出し失敗 (HTTP ' + resp.status + ')';
     try {
       const errData = await resp.json();
-      if (errData.error && errData.error.message) {
-        errMsg = errData.error.message;
-      }
+      if (errData.error && errData.error.message) errMsg = errData.error.message;
     } catch {}
     throw new Error(errMsg);
   }
@@ -691,22 +938,15 @@ async function callGemini(userMessage) {
   const data = await resp.json();
   const candidate = data.candidates && data.candidates[0];
   if (!candidate) throw new Error('AIから応答がありませんでした');
-
-  // safety filterで止まった場合
-  if (candidate.finishReason === 'SAFETY') {
-    throw new Error('安全性フィルタにより応答できませんでした');
-  }
+  if (candidate.finishReason === 'SAFETY') throw new Error('安全性フィルタにより応答できませんでした');
 
   const parts = candidate.content && candidate.content.parts;
   if (!parts || parts.length === 0) throw new Error('応答が空でした');
-
   const text = parts.map(p => p.text || '').join('').trim();
   if (!text) throw new Error('応答が空でした');
-
   return text;
 }
 
-// ===== 送信処理 =====
 async function sendMessage() {
   if (isWaitingResponse) return;
   const input = document.getElementById('chatInput');
@@ -719,16 +959,14 @@ async function sendMessage() {
     return;
   }
 
-  // ユーザーメッセージを追加
   const userMsg = {
     role: 'user',
     content: text,
     timestamp: new Date().toISOString()
   };
   chatHistory.push(userMsg);
-  saveHistory();
+  saveChatHistory();
   renderChat();
-
   input.value = '';
   input.style.height = 'auto';
 
@@ -739,12 +977,16 @@ async function sendMessage() {
 
   try {
     const reply = await callGemini(text);
+    const { emotion, cleanText } = extractEmotion(reply);
+    if (emotion) setCharExpression(emotion);
+
     chatHistory.push({
       role: 'ai',
-      content: reply,
+      content: cleanText,
+      emotion: emotion || null,
       timestamp: new Date().toISOString()
     });
-    saveHistory();
+    saveChatHistory();
     removeLoading();
     renderChat();
     scrollChatToBottom();
@@ -758,7 +1000,64 @@ async function sendMessage() {
   }
 }
 
-// ===== UIイベント =====
+function openCharSelectModal() {
+  const list = document.getElementById('charCardList');
+  list.innerHTML = '';
+  CHARACTERS.forEach(char => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (char.id === activeCharId ? ' selected' : '');
+
+    const img = document.createElement('img');
+    img.className = 'char-card-img';
+    img.src = char.expressions.default;
+    img.alt = char.name;
+    img.onerror = function() {
+      const fb = document.createElement('div');
+      fb.className = 'char-card-img';
+      fb.style.cssText = 'font-size:36px;display:flex;align-items:center;justify-content:center;';
+      fb.textContent = char.fallbackEmoji;
+      img.replaceWith(fb);
+    };
+
+    const info = document.createElement('div');
+    info.className = 'char-card-info';
+    info.innerHTML =
+      '<div class="char-card-name">' + escapeHtml(char.name) + '</div>' +
+      '<div class="char-card-desc">' + escapeHtml(char.species) + ' ・ ' + escapeHtml(char.personality) + '<br>' + escapeHtml(char.description) + '</div>';
+
+    card.appendChild(img);
+    card.appendChild(info);
+    card.addEventListener('click', () => {
+      selectCharacter(char.id);
+      closeCharSelectModal();
+    });
+    list.appendChild(card);
+  });
+  document.getElementById('charSelectModal').classList.add('show');
+}
+function closeCharSelectModal() {
+  document.getElementById('charSelectModal').classList.remove('show');
+}
+
+function selectCharacter(charId) {
+  if (charId === activeCharId) return;
+  activeCharId = charId;
+  localStorage.setItem(STORAGE_KEYS.activeChar, charId);
+  chatHistory = loadChatHistory(charId);
+  applyCharTheme(getActiveChar());
+  updateCharDisplay();
+  renderChat();
+  setTimeout(scrollChatToBottom, 100);
+  showToast(getActiveChar().name + 'に切り替えたよ', 'success');
+}
+
+function handleCharImageClick() {
+  const img = document.getElementById('charImage');
+  if (!img || !img.src) return;
+  document.getElementById('charZoomImg').src = img.src;
+  document.getElementById('charZoom').classList.add('show');
+}
+
 document.getElementById('btnSend').addEventListener('click', sendMessage);
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -771,41 +1070,49 @@ document.getElementById('chatInput').addEventListener('input', e => {
   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
 });
 
-// 設定画面
+document.getElementById('btnOpenCharSelect').addEventListener('click', openCharSelectModal);
+document.getElementById('btnCloseCharSelect').addEventListener('click', closeCharSelectModal);
+document.getElementById('charSelectModal').addEventListener('click', e => {
+  if (e.target.id === 'charSelectModal') closeCharSelectModal();
+});
+
+document.getElementById('charZoom').addEventListener('click', () => {
+  document.getElementById('charZoom').classList.remove('show');
+});
+
 document.getElementById('btnSaveSettings').addEventListener('click', () => {
   settings.apiKey = document.getElementById('inputApiKey').value.trim();
   settings.model = document.getElementById('inputModel').value;
-  settings.systemPrompt = document.getElementById('inputSystemPrompt').value;
   saveSettings();
   updateApiWarning();
-  showToast('設定を保存しました', 'success');
+  showToast('設定を保存したよ', 'success');
 });
 
 document.getElementById('btnClearChat').addEventListener('click', () => {
-  if (!confirm('チャット履歴をすべて削除しますか?')) return;
+  const char = getActiveChar();
+  if (!confirm(char.name + 'とのチャット履歴をすべて削除しますか?')) return;
   chatHistory = [];
-  saveHistory();
+  saveChatHistory();
   renderChat();
+  setCharExpression('default');
   showToast('履歴を削除しました', 'success');
 });
 
-// APIキー未設定の警告
 function updateApiWarning() {
-  const warn = document.getElementById('apiWarning');
-  warn.style.display = settings.apiKey ? 'none' : 'block';
+  document.getElementById('apiWarning').style.display = settings.apiKey ? 'none' : 'block';
 }
 
-// ===== 初期化 =====
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  applyCharTheme(getActiveChar());
+});
+
 function init() {
-  // 設定をフォームに反映
   document.getElementById('inputApiKey').value = settings.apiKey || '';
   document.getElementById('inputModel').value = settings.model || DEFAULT_SETTINGS.model;
-  document.getElementById('inputSystemPrompt').value = settings.systemPrompt || '';
-
+  applyCharTheme(getActiveChar());
+  updateCharDisplay();
   renderChat();
   updateApiWarning();
-
-  // APIキー未設定なら設定タブへ誘導
   if (!settings.apiKey) {
     setTimeout(() => switchScreen('settings'), 100);
   }
