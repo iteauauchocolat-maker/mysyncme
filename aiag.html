@@ -62,12 +62,48 @@ body {
   transition: background 0.6s ease;
   min-height: 100vh;
 }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url('images/cage_bg.jpg') center bottom / cover no-repeat;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+body.bg-cage::before { opacity: 1; }
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255, 245, 230, 0.0) 0%,
+    rgba(255, 245, 230, 0.0) 35%,
+    rgba(255, 245, 230, 0.25) 70%,
+    rgba(255, 240, 220, 0.55) 100%);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+body.bg-cage::after { opacity: 1; }
+@media (prefers-color-scheme: dark) {
+  body::after {
+    background: linear-gradient(180deg,
+      rgba(20, 14, 10, 0.0) 0%,
+      rgba(20, 14, 10, 0.15) 35%,
+      rgba(20, 14, 10, 0.45) 70%,
+      rgba(20, 14, 10, 0.7) 100%);
+  }
+}
 #app {
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
   padding-top: env(safe-area-inset-top);
+  position: relative;
 }
 .screen {
   flex: 1;
@@ -134,17 +170,28 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.1));
-  transition: opacity 0.3s ease;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
+  transition: opacity 0.3s ease, filter 0.3s ease;
   cursor: pointer;
   user-select: none;
   -webkit-user-drag: none;
+}
+body.bg-cage .char-image {
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35)) drop-shadow(0 0 12px rgba(255, 245, 220, 0.4));
 }
 .char-name-label {
   margin-top: 4px;
   font-size: 13px;
   color: var(--text-sub);
   font-weight: 500;
+}
+body.bg-cage .char-name-label {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px 10px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 .chat-list {
   flex: 1 0 auto;
@@ -195,6 +242,33 @@ body {
   padding: 8px;
   max-width: 90%;
   box-shadow: none;
+}
+body.bg-cage .bubble.system {
+  background: rgba(255, 255, 255, 0.7);
+  color: #4a3525;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 14px;
+  padding: 8px 14px;
+}
+@media (prefers-color-scheme: dark) {
+  body.bg-cage .bubble.system {
+    background: rgba(30, 22, 16, 0.7);
+    color: #FFE5C8;
+  }
+}
+body.bg-cage .bubble.ai {
+  background: rgba(255, 252, 245, 0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  body.bg-cage .bubble.ai {
+    background: rgba(40, 30, 22, 0.92);
+  }
+}
+body.bg-cage .timestamp {
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .timestamp {
   font-size: 11px;
@@ -935,9 +1009,11 @@ function switchScreen(name) {
   const inputArea = document.getElementById('chatInputArea');
   if (name === 'chat') {
     inputArea.classList.add('show');
+    document.body.classList.add('bg-cage');
     setTimeout(scrollChatToBottom, 50);
   } else {
     inputArea.classList.remove('show');
+    document.body.classList.remove('bg-cage');
   }
 }
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1585,6 +1661,7 @@ function init() {
   renderChat();
   renderProfileScreen();
   updateApiWarning();
+  document.body.classList.add('bg-cage');
   if (!settings.apiKey) {
     setTimeout(() => switchScreen('settings'), 100);
   }
