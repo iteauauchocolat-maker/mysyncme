@@ -117,7 +117,7 @@ body.bg-cage::after { opacity: 1; }
 }
 .screen.active { display: flex; }
 .header {
-  padding: calc(env(safe-area-inset-top) + 14px) 16px 10px;
+  padding: 60px 16px 10px;
   background: var(--card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -846,7 +846,7 @@ body.bg-cage .timestamp {
   font-size: 14px;
 }
 .main-content {
-  padding: calc(env(safe-area-inset-top) + 40px) 16px calc(60px + 24px + env(safe-area-inset-bottom));
+  padding: 80px 16px calc(60px + 24px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2411,6 +2411,9 @@ function switchScreen(name) {
     document.body.classList.remove('bg-cage');
   }
   if (name === 'main') {
+    const sc = document.getElementById('screen-main');
+    if (sc) sc.scrollTop = 0;
+    window.scrollTo(0, 0);
     renderMainScreen();
     refreshMainData(false);
   }
