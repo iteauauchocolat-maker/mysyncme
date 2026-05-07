@@ -644,10 +644,10 @@ body.bg-cage .timestamp {
   padding: 10px 8px 12px;
   font-family: inherit;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.4;
   text-align: center;
   cursor: pointer;
-  min-height: 68px;
+  min-height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -668,7 +668,7 @@ body.bg-cage .timestamp {
 .fukidashi:active { opacity: 0.8; transform: scale(0.97); }
 .fukidashi-text {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -698,10 +698,12 @@ body.bg-cage .timestamp {
   border-radius: 14px;
   padding: 16px 14px;
   font-family: inherit;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
   cursor: pointer;
-  min-height: 80px;
+  min-height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1011,7 +1013,7 @@ body.bg-cage .timestamp {
         <div class="main-character-img">
           <img id="mainCharImg" src="" alt="">
         </div>
-        <button class="main-talk-btn" id="btnMainTalk" type="button">会話する</button>
+        <button class="main-talk-btn" id="btnMainTalk" type="button">お部屋に行って<br>会話する</button>
       </div>
 
       <div class="main-action-grid">
@@ -1207,7 +1209,7 @@ body.bg-cage .timestamp {
     </div>
   </div>
 
-  <div id="chatInputArea" class="chat-input-area show">
+  <div id="chatInputArea" class="chat-input-area">
     <button id="btnImageGen" class="image-gen-btn" aria-label="画像を生成" title="画像を作る">🎨</button>
     <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
     <button id="btnSend" class="send-btn" aria-label="送信">
