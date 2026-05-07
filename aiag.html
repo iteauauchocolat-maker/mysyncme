@@ -1817,10 +1817,10 @@ body.bg-cage .timestamp {
   <div id="chatInputArea" class="chat-input-area">
     <div id="chatAttachments" class="chat-attachments"></div>
     <div class="chat-input-row">
-      <button id="btnImageGen" class="image-gen-btn" aria-label="画像を生成" title="画像を作る">🎨</button>
-      <button id="btnAttach" class="image-gen-btn" aria-label="ファイルを添付" title="ファイルや画像を添付">📎</button>
-      <button id="btnDirections" class="image-gen-btn" aria-label="道順を調べる" title="道順を調べる">🧭</button>
-      <button id="btnAsk" class="image-gen-btn" aria-label="人に聞く" title="人に聞く">👤</button>
+      <button id="btnImageGen" class="image-gen-btn" aria-label="画像を作成してほしい" title="画像を作成してほしい">🎨</button>
+      <button id="btnAttach" class="image-gen-btn" aria-label="ファイルや画像を添付" title="ファイルや画像を添付">📎</button>
+      <button id="btnDirections" class="image-gen-btn" aria-label="道順を調べてほしい" title="道順を調べてほしい">🧭</button>
+      <button id="btnAsk" class="image-gen-btn" aria-label="詳しい人に聞いてきて" title="詳しい人に聞いてきて">👤</button>
       <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
       <button id="btnSend" class="send-btn" aria-label="送信">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1963,7 +1963,7 @@ body.bg-cage .timestamp {
 
 <div class="modal-overlay" id="imageGenModal">
   <div class="modal">
-    <h3>画像を作る</h3>
+    <h3>画像を作成してほしい</h3>
     <div class="field">
       <label>どんな絵?</label>
       <textarea id="inputImageGenPrompt" rows="3" placeholder="例: 川辺で遊んでいるモルモット、夕焼けの公園"></textarea>
@@ -1978,7 +1978,7 @@ body.bg-cage .timestamp {
 
 <div class="modal-overlay" id="directionsModal">
   <div class="modal">
-    <h3>道順を調べる</h3>
+    <h3>道順を調べてほしい</h3>
     <div class="field">
       <label>どこから</label>
       <input type="text" id="inputDirOrigin" placeholder="例: 自宅、東京駅、現在地">
@@ -2018,7 +2018,7 @@ body.bg-cage .timestamp {
 
 <div class="modal-overlay" id="askModal">
   <div class="modal">
-    <h3>人に聞く</h3>
+    <h3>詳しい人に聞いてきて</h3>
     <div class="field">
       <label>知りたいこと</label>
       <textarea id="inputAskQuestion" rows="3" placeholder="例: このメニューでおすすめは?"></textarea>
