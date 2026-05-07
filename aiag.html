@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AIエージェント">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>AIエージェント</title>
+<style>
+/* ============================================================
+   THEME (iOS-like, light + dark)
+============================================================ */
+:root {
+  --bg: #F2F2F7;
+  --bg-elevated: #FFFFFF;
+  --card: #FFFFFF;
+  --text: #000000;
+  --text-2: #3C3C43;
+  --text-3: #8E8E93;
+  --separator: rgba(60, 60, 67, 0.18);
+  --border: rgba(60, 60, 67, 0.22);
+  --user-bubble: #007AFF;
+  --user-bubble-text: #FFFFFF;
+  --ai-bubble: #E5E5EA;
+  --ai-bubble-text: #000000;
+  --accent: #007AFF;
+  --danger: #FF3B30;
+  --success: #34C759;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --bg-elevated: #1C1C1E;
+    --card: #1C1C1E;
+    --text: #FFFFFF;
+    --text-2: #EBEBF5;
+    --text-3: #8E8E93;
+    --separator: rgba(84, 84, 88, 0.4);
+    --border: rgba(84, 84, 88, 0.65);
+    --user-bubble: #0A84FF;
+    --user-bubble-text: #FFFFFF;
+    --ai-bubble: #2C2C2E;
+    --ai-bubble-text: #FFFFFF;
+    --accent: #0A84FF;
+    --danger: #FF453A;
+    --success: #30D158;
+  }
+}
+
+/* ============================================================
+   BASE
+============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior-y: contain;
+}
+body {
+  display: flex; flex-direction: column;
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+}
+button {
+  font-family: inherit; font-size: inherit;
+  cursor: pointer; border: none; background: none; color: inherit;
+  min-height: 44px; min-width: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+button:active { opacity: 0.55; }
+input, textarea, select {
+  font-family: inherit; font-size: 16px;
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 11px 12px; width: 100%;
+  -webkit-appearance: none; appearance: none;
+}
+textarea { resize: none; line-height: 1.4; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+/* ============================================================
+   APP STRUCTURE
+============================================================ */
+.app { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.tab-content { flex: 1; display: none; flex-direction: column; overflow: hidden; min-height: 0; }
+.tab-content.active { display: flex; }
+
+.header {
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 0.5px solid var(--separator);
+  text-align: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.header h1 { font-size: 17px; font-weight: 600; }
+.header-action {
+  position: absolute;
+  right: 8px;
+  top: calc(var(--safe-top) + 6px);
+  color: var(--accent);
+  font-size: 16px;
+  padding: 6px 10px;
+  min-height: 36px;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  background: var(--bg-elevated);
+  border-top: 0.5px solid var(--separator);
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+}
+.tab-button {
+  flex: 1; flex-direction: column;
+  padding: 6px 0 4px;
+  min-height: 50px;
+  color: var(--text-3);
+  font-size: 10px;
+  gap: 2px;
+  font-weight: 500;
+}
+.tab-button.active { color: var(--accent); }
+.tab-button svg { width: 26px; height: 26px; }
+
+/* ============================================================
+   CHAT TAB
+============================================================ */
+.upcoming-cards {
+  flex-shrink: 0;
+  padding: 8px;
+  overflow-x: auto;
+  display: flex;
+  gap: 8px;
+  scroll-snap-type: x proximity;
+  background: var(--bg-elevated);
+  border-bottom: 0.5px solid var(--separator);
+  -webkit-overflow-scrolling: touch;
+}
+.upcoming-cards::-webkit-scrollbar { display: none; }
+.upcoming-cards:empty { display: none; padding: 0; border-bottom: none; }
+.upcoming-card {
+  flex: 0 0 auto;
+  min-width: 150px; max-width: 220px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  scroll-snap-align: start;
+}
+.upcoming-card-time { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
+.upcoming-card-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 8px;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--text-3); gap: 10px; padding: 32px; text-align: center;
+}
+.chat-empty svg { width: 48px; height: 48px; opacity: 0.5; }
+
+.message { display: flex; flex-direction: column; max-width: 78%; gap: 2px; }
+.message.user { align-self: flex-end; align-items: flex-end; }
+.message.model { align-self: flex-start; align-items: flex-start; }
+.message-bubble {
+  padding: 9px 13px; border-radius: 18px;
+  font-size: 16px; line-height: 1.4;
+  word-wrap: break-word; white-space: pre-wrap;
+}
+.message.user .message-bubble {
+  background: var(--user-bubble); color: var(--user-bubble-text);
+  border-bottom-right-radius: 4px;
+}
+.message.model .message-bubble {
+  background: var(--ai-bubble); color: var(--ai-bubble-text);
+  border-bottom-left-radius: 4px;
+}
+.message-time { font-size: 10px; color: var(--text-3); padding: 0 4px; }
+
+.typing-cursor {
+  display: inline-block; width: 2px; height: 1em;
+  background: currentColor; vertical-align: middle;
+  margin-left: 1px; animation: blink 1s infinite;
+}
+@keyframes blink { 0%, 50% { opacity: 1 } 51%, 100% { opacity: 0 } }
+
+.action-banner {
+  align-self: center;
+  background: var(--success); color: white;
+  padding: 6px 14px; border-radius: 14px;
+  font-size: 13px; font-weight: 500; margin: 4px 0;
+}
+.error-banner {
+  align-self: stretch;
+  background: var(--danger); color: white;
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 14px; margin: 4px 0; word-wrap: break-word;
+}
+
+.chat-input {
+  flex-shrink: 0;
+  padding: 8px;
+  background: var(--bg-elevated);
+  border-top: 0.5px solid var(--separator);
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.chat-input-textarea {
+  flex: 1;
+  min-height: 36px; max-height: 120px;
+  border-radius: 18px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 16px; line-height: 20px;
+}
+.chat-input-btn {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  min-width: 36px; min-height: 36px;
+  border-radius: 50%;
+  background: var(--accent); color: white;
+}
+.chat-input-btn:disabled { opacity: 0.4; }
+.chat-input-btn.template {
+  background: var(--bg); color: var(--accent);
+  border: 1px solid var(--border);
+}
+.chat-input-btn svg { width: 18px; height: 18px; }
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   GENERIC SECTIONS / BUTTONS
+============================================================ */
+.scrollable {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px calc(16px + var(--safe-bottom));
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 11px 16px;
+  background: var(--accent); color: white;
+  border-radius: 10px;
+  font-size: 15px; font-weight: 600;
+  min-height: 44px; border: none;
+}
+.btn-block { width: 100%; }
+.btn-secondary { background: var(--bg); color: var(--accent); border: 1px solid var(--border); }
+.btn-danger { background: var(--danger); color: white; }
+.btn:disabled { opacity: 0.5; }
+
+.form-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.form-section h3 {
+  font-size: 13px; font-weight: 600; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.form-group { margin-bottom: 12px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+  display: block; font-size: 14px; font-weight: 500;
+  margin-bottom: 6px; color: var(--text);
+}
+.form-help { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.password-input-wrap { position: relative; }
+.password-input-wrap input { padding-right: 44px; }
+.password-toggle {
+  position: absolute; right: 4px; top: 50%;
+  transform: translateY(-50%); color: var(--text-3);
+  min-height: 36px; min-width: 36px;
+}
+.radio-row {
+  display: flex; align-items: center;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--separator);
+  gap: 10px; cursor: pointer;
+}
+.radio-row:last-child { border-bottom: none; }
+.radio-row input[type="radio"] { width: auto; margin: 0; }
+.template-item {
+  background: var(--bg);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.template-item-row { display: flex; align-items: center; gap: 8px; }
+.template-item-name { flex: 1; font-weight: 600; font-size: 14px; }
+.template-item-body { font-size: 13px; color: var(--text-3); white-space: pre-wrap; }
+
+/* ============================================================
+   PROFILE
+============================================================ */
+.profile-input-section {
+  background: var(--card); border-radius: 12px; padding: 12px;
+  margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.profile-input-section textarea {
+  min-height: 100px; background: var(--bg);
+  border: 1px solid var(--border); margin-bottom: 8px;
+}
+.category-card {
+  background: var(--card); border-radius: 12px;
+  margin-bottom: 12px; box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.category-header {
+  padding: 10px 14px;
+  font-size: 13px; font-weight: 600; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--card);
+  border-bottom: 0.5px solid var(--separator);
+}
+.category-header button {
+  color: var(--accent); font-size: 16px;
+  padding: 4px; min-height: 32px; min-width: 32px;
+}
+.profile-row {
+  display: flex; padding: 10px 14px;
+  border-bottom: 0.5px solid var(--separator);
+  align-items: center; gap: 8px;
+}
+.profile-row:last-child { border-bottom: none; }
+.profile-row-content { flex: 1; min-width: 0; }
+.profile-row-key { font-size: 12px; color: var(--text-3); margin-bottom: 2px; }
+.profile-row-value { font-size: 15px; color: var(--text); word-wrap: break-word; }
+.profile-row-actions { display: flex; gap: 4px; }
+.profile-row-actions button { padding: 6px; min-height: 32px; min-width: 32px; }
+.icon-btn-danger { color: var(--danger); }
+
+/* ============================================================
+   SCHEDULE / CALENDAR
+============================================================ */
+.calendar {
+  background: var(--card); border-radius: 12px;
+  padding: 12px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.calendar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.calendar-title { font-size: 17px; font-weight: 600; }
+.calendar-nav { display: flex; gap: 4px; align-items: center; }
+.calendar-nav-btn { min-height: 36px; min-width: 36px; color: var(--accent); font-weight: 600; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
+.calendar-weekday {
+  text-align: center; font-size: 11px; font-weight: 600;
+  color: var(--text-3); padding: 6px 0;
+}
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  font-size: 15px;
+  border-radius: 50%;
+  position: relative;
+  min-height: 36px;
+  cursor: pointer;
+}
+.calendar-day.other-month { color: var(--text-3); opacity: 0.45; }
+.calendar-day.today { color: var(--accent); font-weight: 700; }
+.calendar-day.selected { background: var(--accent); color: white; }
+.calendar-day.selected.today { color: white; }
+.calendar-day-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent); position: absolute; bottom: 4px;
+}
+.calendar-day.selected .calendar-day-dot { background: white; }
+
+.schedule-list {
+  background: var(--card); border-radius: 12px;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.schedule-list-header {
+  padding: 10px 14px;
+  font-size: 13px; font-weight: 600;
+  color: var(--text-3);
+  border-bottom: 0.5px solid var(--separator);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.schedule-item {
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--separator);
+  display: flex; flex-direction: column; gap: 2px;
+  cursor: pointer;
+}
+.schedule-item:last-child { border-bottom: none; }
+.schedule-item:active { background: var(--bg); }
+.schedule-item-time { font-size: 12px; color: var(--accent); font-weight: 600; }
+.schedule-item-title { font-size: 16px; font-weight: 500; }
+.schedule-item-memo { font-size: 13px; color: var(--text-3); }
+.schedule-empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 14px; }
+
+.fab {
+  position: fixed;
+  bottom: calc(60px + var(--safe-bottom) + 12px);
+  right: 16px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent); color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  z-index: 50;
+}
+.fab svg { width: 28px; height: 28px; }
+
+/* ============================================================
+   MODAL & TOAST
+============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fade-in 0.2s ease;
+}
+@media (min-height: 600px) {
+  .modal-overlay { align-items: center; padding: 16px; }
+}
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+.modal {
+  background: var(--bg-elevated);
+  border-radius: 14px 14px 0 0;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  animation: slide-up 0.25s ease;
+}
+@media (min-height: 600px) { .modal { border-radius: 14px; } }
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0 }
+  to   { transform: translateY(0); opacity: 1 }
+}
+.modal-header {
+  padding: 14px 12px;
+  border-bottom: 0.5px solid var(--separator);
+  font-size: 17px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.modal-header > * { flex: 1; }
+.modal-header > span:nth-child(2) { text-align: center; }
+.modal-header > *:last-child { text-align: right; }
+.modal-body { padding: 16px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.modal-footer {
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  border-top: 0.5px solid var(--separator);
+  display: flex; gap: 8px;
+  flex-shrink: 0;
+}
+.modal-footer .btn { flex: 1; }
+.modal-close { color: var(--accent); font-size: 16px; padding: 4px 8px; min-height: 36px; min-width: 36px; }
+
+/* Template list inside modal */
+.template-list { display: flex; flex-direction: column; gap: 8px; }
+.template-card {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.template-card:active { background: var(--separator); }
+.template-card-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.template-card-body { font-size: 13px; color: var(--text-3); white-space: pre-wrap; }
+
+.toast {
+  position: fixed;
+  bottom: calc(80px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0,0,0,0.85);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 22px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 200;
+  max-width: 80%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Tab: Chat ============ -->
+  <section class="tab-content" id="tab-chat" data-tab="chat">
+    <header class="header"><h1>AIエージェント</h1></header>
+    <div class="upcoming-cards" id="upcoming-cards"></div>
+    <div class="chat-history" id="chat-history"></div>
+    <div class="chat-input">
+      <button class="chat-input-btn template" id="btn-template" aria-label="テンプレート">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+      </button>
+      <textarea id="chat-textarea" class="chat-input-textarea" rows="1" placeholder="メッセージを入力..."></textarea>
+      <button class="chat-input-btn" id="btn-send" aria-label="送信">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ Tab: Profile ============ -->
+  <section class="tab-content" id="tab-profile" data-tab="profile">
+    <header class="header"><h1>プロフィール</h1></header>
+    <div class="scrollable" id="profile-content"></div>
+  </section>
+
+  <!-- ============ Tab: Schedule ============ -->
+  <section class="tab-content" id="tab-schedule" data-tab="schedule">
+    <header class="header">
+      <h1>スケジュール</h1>
+      <button class="header-action" id="btn-today">今日</button>
+    </header>
+    <div class="scrollable" id="schedule-content"></div>
+    <button class="fab" id="btn-add-schedule" aria-label="予定追加">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </section>
+
+  <!-- ============ Tab: Admin ============ -->
+  <section class="tab-content" id="tab-admin" data-tab="admin">
+    <header class="header"><h1>管理者設定</h1></header>
+    <div class="scrollable" id="admin-content"></div>
+  </section>
+
+  <!-- ============ Tab Bar ============ -->
+  <nav class="tab-bar">
+    <button class="tab-button" data-target="chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>チャット</span>
+    </button>
+    <button class="tab-button" data-target="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>プロフィール</span>
+    </button>
+    <button class="tab-button" data-target="schedule">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>スケジュール</span>
+    </button>
+    <button class="tab-button" data-target="admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>設定</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const STORAGE_KEYS = {
+  settings: 'agent_settings',
+  chat:     'agent_chat_history',
+  profile:  'agent_profile',
+  schedule: 'agent_schedule'
+};
+const DEFAULT_SYSTEM_PROMPT =
+  "あなたはユーザーの相棒となる親しみやすいAIアシスタントです。" +
+  "ユーザーのプロフィールと予定を踏まえて、自然な対話をしてください。";
+const ACTION_INSTRUCTION =
+  "\n\n【重要】ユーザーが予定を追加したい意図を示した場合のみ、応答の末尾に " +
+  "[[ACTION:ADD_SCHEDULE]]{\"title\":\"...\",\"datetime\":\"YYYY-MM-DDTHH:mm:ss\",\"memo\":\"...\"}[[/ACTION]] " +
+  "の形式で予定情報を含めてください。それ以外の通常会話では絶対にこのタグを含めないこと。" +
+  "datetimeは必ずISO8601形式で、現在の日時を踏まえて適切な日時を補完してください。" +
+  "タグ部分はユーザーには表示されません。";
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  settings: null,
+  chatHistory: [],
+  profile: {},
+  schedule: [],
+  currentTab: 'chat',
+  selectedDate: null,
+  calendarDate: new Date(),
+  adminAuthed: false,
+  isStreaming: false,
+  firstRun: false
+};
+
+// ============================================================
+// STORAGE UTILITIES
+// ============================================================
+/** Load JSON from localStorage with fallback. */
+function load(key, def) {
+  try {
+    const v = localStorage.getItem(key);
+    return v == null ? def : JSON.parse(v);
+  } catch (e) {
+    console.error('load failed', key, e);
+    return def;
+  }
+}
+/** Save JSON to localStorage; toasts on quota errors. */
+function save(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+    return true;
+  } catch (e) {
+    if (e && e.name === 'QuotaExceededError') {
+      showToast('容量オーバー: 古いチャット履歴の削除を検討してください', 'error');
+    } else {
+      showToast('保存エラー: ' + e.message, 'error');
+    }
+    return false;
+  }
+}
+
+// ============================================================
+// SHA-256 (Web Crypto)
+// ============================================================
+async function sha256(text) {
+  const buf = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// ============================================================
+// MISC UTILITIES
+// ============================================================
+function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function toLocalISO(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+function dateKey(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  const target = new Date(d); target.setHours(0,0,0,0);
+  let dateStr;
+  if (target.getTime() === today.getTime()) dateStr = '今日';
+  else if (target.getTime() === tomorrow.getTime()) dateStr = '明日';
+  else dateStr = `${d.getMonth()+1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
+  return `${dateStr} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatChatTime(iso) {
+  const d = new Date(iso);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+async function init() {
+  loadAll();
+  await ensureInitialSetup();
+  initSampleData();
+  bindUI();
+  switchTab('chat');
+}
+
+function loadAll() {
+  state.settings    = load(STORAGE_KEYS.settings, null);
+  state.chatHistory = load(STORAGE_KEYS.chat, []);
+  state.profile     = load(STORAGE_KEYS.profile, {});
+  state.schedule    = load(STORAGE_KEYS.schedule, []);
+}
+
+async function ensureInitialSetup() {
+  if (!state.settings || !state.settings.adminPasswordHash) {
+    state.firstRun = true;
+    await showInitialPasswordSetup();
+  } else {
+    state.firstRun = false;
+  }
+}
+
+/** Add sample schedule and templates only on first run. */
+function initSampleData() {
+  if (!state.firstRun) return;
+
+  // Sample schedule - today evening + tomorrow morning
+  const today = new Date(); today.setHours(18, 0, 0, 0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(10, 0, 0, 0);
+  state.schedule = [
+    { id: uid(), title: '夕食', datetime: toLocalISO(today),    memo: 'サンプル予定です。削除可能。', createdAt: new Date().toISOString() },
+    { id: uid(), title: '打ち合わせ', datetime: toLocalISO(tomorrow), memo: 'サンプル予定です。削除可能。', createdAt: new Date().toISOString() }
+  ];
+  save(STORAGE_KEYS.schedule, state.schedule);
+
+  // Sample templates
+  state.settings.templates = [
+    { id: uid(), name: '今日の振り返り', body: '今日一日を振り返ってみたい。一緒に整理してくれる?' },
+    { id: uid(), name: '明日の予定確認', body: '明日の予定を確認したい。何があったっけ?' },
+    { id: uid(), name: '気分転換に雑談', body: 'ちょっと気分転換に雑談したい気分。最近の面白い話題ない?' }
+  ];
+  save(STORAGE_KEYS.settings, state.settings);
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+function switchTab(name) {
+  state.currentTab = name;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.target === name));
+
+  if (name === 'chat')      renderChat();
+  else if (name === 'profile')  renderProfile();
+  else if (name === 'schedule') renderSchedule();
+  else if (name === 'admin') {
+    if (state.adminAuthed) renderAdmin();
+    else showAdminAuth();
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 2500);
+}
+
+// ============================================================
+// CONFIRM / PROMPT
+// ============================================================
+function showConfirm(msg, options = {}) {
+  return new Promise((resolve) => {
+    const okText = options.okText || 'OK';
+    const cancelText = options.cancelText || 'キャンセル';
+    const danger = options.danger;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:340px">
+        <div class="modal-body" style="padding:24px 20px;text-align:center;">
+          <div style="font-size:15px;line-height:1.5;white-space:pre-wrap">${escapeHtml(msg)}</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-cancel>${escapeHtml(cancelText)}</button>
+          <button class="btn ${danger ? 'btn-danger' : ''}" data-ok>${escapeHtml(okText)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('[data-ok]').onclick     = () => { overlay.remove(); resolve(true); };
+    overlay.querySelector('[data-cancel]').onclick = () => { overlay.remove(); resolve(false); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resol
