@@ -107,6 +107,7 @@ body.bg-cage::after { opacity: 1; }
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
+  padding-top: env(safe-area-inset-top);
   position: relative;
 }
 .screen {
@@ -119,7 +120,7 @@ body.bg-cage::after { opacity: 1; }
 }
 .screen.active { display: flex; }
 .header {
-  padding: 60px 16px 10px;
+  padding: 10px 16px;
   background: var(--card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -862,11 +863,11 @@ body.bg-cage .timestamp {
   font-size: 14px;
 }
 .main-content {
-  padding: 100px 16px calc(60px + 8px + env(safe-area-inset-bottom));
+  padding: 24px 16px calc(60px + 8px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: calc(100dvh - 60px - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 .main-logo {
   position: relative;
