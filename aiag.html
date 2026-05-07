@@ -746,10 +746,10 @@ body.bg-cage .timestamp {
 }
 
 .main-tile {
-  border: none;
-  border-radius: 16px;
-  background: #E89A5C;
-  color: #fff;
+  border: 3px solid #6CB7E8;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
   font-family: inherit;
   cursor: pointer;
   display: flex;
@@ -758,7 +758,7 @@ body.bg-cage .timestamp {
   justify-content: flex-start;
   gap: 4px;
   padding: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.10);
   transition: opacity 0.1s, transform 0.1s;
   text-align: left;
   min-height: 130px;
@@ -785,26 +785,47 @@ body.bg-cage .timestamp {
   flex-direction: column;
   justify-content: center;
   gap: 4px;
+  color: var(--text);
 }
 .main-tile-row {
   display: flex;
   gap: 6px;
   align-items: baseline;
 }
-.main-tile-row .time { font-size: 11px; opacity: 0.9; flex-shrink: 0; min-width: 38px; }
+.main-tile-row .time { font-size: 11px; opacity: 0.7; flex-shrink: 0; min-width: 38px; }
 .main-tile-row .title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.main-tile-empty { opacity: 0.85; font-size: 12px; }
+.main-tile-empty { color: var(--text-sub); font-size: 12px; }
 .main-tile-icon-big { font-size: 44px; line-height: 1; margin: 6px 0; }
-.main-tile-stars-bottom { font-size: 13px; letter-spacing: 1px; line-height: 1; }
+.main-tile-stars-bottom { font-size: 13px; letter-spacing: 1px; line-height: 1; color: #E8A23A; }
 .train-tile .main-tile-body { font-size: 22px; font-weight: 700; align-items: center; }
 
+.schedule-tile { border-color: #6CB7E8; }
+.train-tile { border-color: #62C39A; }
+.todo-tile { border-color: #F2A766; }
+.weather-tile { border-color: #F5BB3C; }
+.fortune-tile { border-color: #B89AE0; }
+
+.schedule-tile .main-tile-label { color: #2876B5; }
+.train-tile .main-tile-label { color: #2A8455; }
+.train-tile .main-tile-body { color: #2A8455; }
+.todo-tile .main-tile-label { color: #B5651D; }
+.weather-tile .main-tile-label { color: #A07A1B; }
+.fortune-tile .main-tile-label { color: #6240A0; }
+
 @media (prefers-color-scheme: dark) {
-  .main-tile { background: #C7813F; }
+  .main-tile {
+    background: rgba(40, 30, 35, 0.85);
+  }
+  .schedule-tile .main-tile-label { color: #79BDF5; }
+  .train-tile .main-tile-label, .train-tile .main-tile-body { color: #82C99B; }
+  .todo-tile .main-tile-label { color: #F2A766; }
+  .weather-tile .main-tile-label { color: #F5C84F; }
+  .fortune-tile .main-tile-label { color: #C8B0EE; }
 }
 
 .app-btn {
