@@ -323,7 +323,7 @@ body.bg-cage .timestamp {
 .chat-input-row {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 .chat-attachments {
   display: flex;
@@ -437,7 +437,7 @@ body.bg-cage .timestamp {
 .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .send-btn svg { width: 18px; height: 18px; }
 .image-gen-btn {
-  width: 40px; height: 40px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   background: var(--card-solid);
   color: var(--char-accent);
@@ -447,7 +447,7 @@ body.bg-cage .timestamp {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-family: inherit;
   transition: opacity 0.2s, transform 0.1s;
 }
@@ -873,28 +873,18 @@ body.bg-cage .timestamp {
   justify-content: center;
 }
 .main-character-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.main-talk-btn {
+.main-talk-box {
   position: relative;
   background: var(--char-bubble);
-  color: var(--char-bubble-text);
-  border: none;
   border-radius: 22px;
-  padding: 16px 14px;
-  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: 0.04em;
-  text-align: center;
-  cursor: pointer;
-  min-height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 12px 10px;
   box-shadow: inset 0 0 0 3px #fff, 0 4px 12px rgba(0, 0, 0, 0.12);
-  transition: opacity 0.1s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 110px;
 }
-.main-talk-btn::before {
+.main-talk-box::before {
   content: '';
   position: absolute;
   left: -9px;
@@ -906,7 +896,61 @@ body.bg-cage .timestamp {
   border-right: 10px solid var(--char-bubble);
   filter: drop-shadow(-2px 0 1px rgba(0, 0, 0, 0.08));
 }
-.main-talk-btn:active { opacity: 0.9; transform: scale(0.99); }
+.main-talk-btn {
+  background: transparent;
+  color: var(--char-bubble-text);
+  border: none;
+  padding: 6px 4px 0;
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+}
+.main-talk-btn:active { opacity: 0.85; }
+.main-talk-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.talk-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.85);
+  color: var(--char-bubble-text);
+  border: none;
+  border-radius: 999px;
+  padding: 3px 8px 3px 3px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.talk-pill:active { opacity: 0.8; transform: scale(0.97); }
+.talk-pill-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--char-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.talk-pill-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .main-grid-major {
   display: grid;
@@ -1397,7 +1441,15 @@ body.bg-cage .timestamp {
         <div class="main-character-img">
           <img id="mainCharImg" src="" alt="">
         </div>
-        <button class="main-talk-btn" id="btnMainTalk" type="button">お部屋に行って<br>会話する</button>
+        <div class="main-talk-box">
+          <button class="main-talk-btn" id="btnMainTalk" type="button">お部屋に行って会話する</button>
+          <div class="main-talk-pills">
+            <button class="talk-pill" data-talk-action="image" type="button"><span class="talk-pill-icon">🎨</span><span class="talk-pill-label">画像作成</span></button>
+            <button class="talk-pill" data-talk-action="attach" type="button"><span class="talk-pill-icon">📎</span><span class="talk-pill-label">ファイル添付</span></button>
+            <button class="talk-pill" data-talk-action="directions" type="button"><span class="talk-pill-icon">🧭</span><span class="talk-pill-label">道順を調べる</span></button>
+            <button class="talk-pill" data-talk-action="ask" type="button"><span class="talk-pill-icon">👤</span><span class="talk-pill-label">人に聞く</span></button>
+          </div>
+        </div>
       </div>
 
       <div class="main-grid-major">
@@ -1653,6 +1705,8 @@ body.bg-cage .timestamp {
     <div class="chat-input-row">
       <button id="btnImageGen" class="image-gen-btn" aria-label="画像を生成" title="画像を作る">🎨</button>
       <button id="btnAttach" class="image-gen-btn" aria-label="ファイルを添付" title="ファイルや画像を添付">📎</button>
+      <button id="btnDirections" class="image-gen-btn" aria-label="道順を調べる" title="道順を調べる">🧭</button>
+      <button id="btnAsk" class="image-gen-btn" aria-label="人に聞く" title="人に聞く">👤</button>
       <textarea id="chatInput" class="chat-input" placeholder="メッセージを入力..." rows="1"></textarea>
       <button id="btnSend" class="send-btn" aria-label="送信">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -1766,6 +1820,65 @@ body.bg-cage .timestamp {
     <div class="modal-actions">
       <button class="btn btn-secondary" id="btnCancelImageGen">キャンセル</button>
       <button class="btn" id="btnSubmitImageGen">作る</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="directionsModal">
+  <div class="modal">
+    <h3>道順を調べる</h3>
+    <div class="field">
+      <label>どこから</label>
+      <input type="text" id="inputDirOrigin" placeholder="例: 自宅、東京駅、現在地">
+    </div>
+    <div class="field">
+      <label>どこまで</label>
+      <input type="text" id="inputDirDestination" placeholder="例: 茗荷谷駅、〇〇カフェ">
+    </div>
+    <div class="field">
+      <label>移動手段</label>
+      <select id="inputDirMode">
+        <option value="transit">電車・バス</option>
+        <option value="walking">徒歩</option>
+        <option value="driving">車</option>
+        <option value="bicycling">自転車</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>時刻のタイプ</label>
+      <select id="inputDirTimeType">
+        <option value="">指定しない</option>
+        <option value="depart">出発時刻</option>
+        <option value="arrive">到着時刻</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>時刻</label>
+      <input type="datetime-local" id="inputDirTime">
+      <div class="hint">「指定しない」なら空欄でOK。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancelDirections">キャンセル</button>
+      <button class="btn" id="btnSubmitDirections">送信</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="askModal">
+  <div class="modal">
+    <h3>人に聞く</h3>
+    <div class="field">
+      <label>知りたいこと</label>
+      <textarea id="inputAskQuestion" rows="3" placeholder="例: このメニューでおすすめは?"></textarea>
+    </div>
+    <div class="field">
+      <label>参考情報(URL等)</label>
+      <textarea id="inputAskRefs" rows="3" placeholder="例: https://〜 / 写真の説明 / 関連メモ"></textarea>
+      <div class="hint">参考になりそうな情報があれば入れてね(任意)。</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btnCancelAsk">キャンセル</button>
+      <button class="btn" id="btnSubmitAsk">送信</button>
     </div>
   </div>
 </div>
@@ -2091,6 +2204,18 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 document.getElementById('btnMainTalk').addEventListener('click', () => switchScreen('chat'));
+document.querySelectorAll('.talk-pill').forEach(p => {
+  p.addEventListener('click', () => {
+    const action = p.dataset.talkAction;
+    switchScreen('chat');
+    setTimeout(() => {
+      if (action === 'image') openImageGenModal();
+      else if (action === 'attach') document.getElementById('inputAttach').click();
+      else if (action === 'directions') openDirectionsModal();
+      else if (action === 'ask') openAskModal();
+    }, 80);
+  });
+});
 document.querySelectorAll('.fukidashi').forEach(el => {
   el.addEventListener('click', () => {
     const idx = parseInt(el.dataset.fuki, 10) || 0;
@@ -2366,6 +2491,88 @@ function openImageGenModal() {
 }
 function closeImageGenModal() {
   document.getElementById('imageGenModal').classList.remove('show');
+}
+
+function openDirectionsModal() {
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  document.getElementById('inputDirOrigin').value = '';
+  document.getElementById('inputDirDestination').value = '';
+  document.getElementById('inputDirMode').value = 'transit';
+  document.getElementById('inputDirTimeType').value = '';
+  document.getElementById('inputDirTime').value = '';
+  document.getElementById('directionsModal').classList.add('show');
+  setTimeout(() => document.getElementById('inputDirDestination').focus(), 100);
+}
+function closeDirectionsModal() {
+  document.getElementById('directionsModal').classList.remove('show');
+}
+function buildMapsDirUrl(origin, destination, mode, timeType, timeIso) {
+  const enc = s => encodeURIComponent((s || '').trim());
+  const params = ['api=1'];
+  params.push('origin=' + enc(origin));
+  params.push('destination=' + enc(destination));
+  params.push('travelmode=' + (mode || 'transit'));
+  return 'https://www.google.com/maps/dir/?' + params.join('&');
+}
+async function submitDirections() {
+  const origin = document.getElementById('inputDirOrigin').value.trim();
+  const destination = document.getElementById('inputDirDestination').value.trim();
+  const mode = document.getElementById('inputDirMode').value || 'transit';
+  const timeType = document.getElementById('inputDirTimeType').value;
+  const time = document.getElementById('inputDirTime').value;
+  if (!destination) {
+    showToast('「どこまで」を入れてね', 'error');
+    return;
+  }
+  const url = buildMapsDirUrl(origin, destination, mode, timeType, time);
+  const modeLabel = ({ transit: '電車・バス', walking: '徒歩', driving: '車', bicycling: '自転車' })[mode] || mode;
+  let timeLine = '';
+  if (timeType && time) {
+    const t = time.replace('T', ' ');
+    timeLine = '\n' + (timeType === 'arrive' ? '到着希望' : '出発予定') + ': ' + t;
+  }
+  const userText =
+    '【道順を調べる】\n' +
+    '出発: ' + (origin || '(未指定 / 現在地想定)') + '\n' +
+    '目的: ' + destination + '\n' +
+    '移動手段: ' + modeLabel + timeLine + '\n\n' +
+    '次の Google マップ経路リンクをそのまま返事に含めてください: ' + url + '\n' +
+    '所要時間の目安や乗り換えのコツなど、分かる範囲でアドバイスしてください。';
+  closeDirectionsModal();
+  document.getElementById('chatInput').value = userText;
+  await sendMessage();
+}
+
+function openAskModal() {
+  if (!settings.apiKey) {
+    showToast('APIキーを設定してください', 'error');
+    switchScreen('settings');
+    return;
+  }
+  document.getElementById('inputAskQuestion').value = '';
+  document.getElementById('inputAskRefs').value = '';
+  document.getElementById('askModal').classList.add('show');
+  setTimeout(() => document.getElementById('inputAskQuestion').focus(), 100);
+}
+function closeAskModal() {
+  document.getElementById('askModal').classList.remove('show');
+}
+async function submitAsk() {
+  const q = document.getElementById('inputAskQuestion').value.trim();
+  const refs = document.getElementById('inputAskRefs').value.trim();
+  if (!q) {
+    showToast('「知りたいこと」を入れてね', 'error');
+    return;
+  }
+  let userText = '【質問】\n' + q;
+  if (refs) userText += '\n\n【参考情報】\n' + refs;
+  closeAskModal();
+  document.getElementById('chatInput').value = userText;
+  await sendMessage();
 }
 
 async function submitImageGeneration() {
@@ -2738,6 +2945,20 @@ document.getElementById('inputAttach').addEventListener('change', async e => {
   e.target.value = '';
   if (files.length === 0) return;
   await addAttachmentFiles(files);
+});
+
+document.getElementById('btnDirections').addEventListener('click', openDirectionsModal);
+document.getElementById('btnCancelDirections').addEventListener('click', closeDirectionsModal);
+document.getElementById('btnSubmitDirections').addEventListener('click', submitDirections);
+document.getElementById('directionsModal').addEventListener('click', e => {
+  if (e.target.id === 'directionsModal') closeDirectionsModal();
+});
+
+document.getElementById('btnAsk').addEventListener('click', openAskModal);
+document.getElementById('btnCancelAsk').addEventListener('click', closeAskModal);
+document.getElementById('btnSubmitAsk').addEventListener('click', submitAsk);
+document.getElementById('askModal').addEventListener('click', e => {
+  if (e.target.id === 'askModal') closeAskModal();
 });
 
 document.getElementById('btnOpenCharSelect').addEventListener('click', openCharSelectModal);
