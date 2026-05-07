@@ -105,7 +105,6 @@ body.bg-cage::after { opacity: 1; }
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  padding-top: env(safe-area-inset-top);
   position: relative;
 }
 .screen {
@@ -118,7 +117,7 @@ body.bg-cage::after { opacity: 1; }
 }
 .screen.active { display: flex; }
 .header {
-  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  padding: calc(env(safe-area-inset-top) + 14px) 16px 10px;
   background: var(--card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -848,7 +847,7 @@ body.bg-cage .timestamp {
   font-size: 14px;
 }
 .main-content {
-  padding: calc(14px + env(safe-area-inset-top)) 16px calc(60px + 16px + env(safe-area-inset-bottom));
+  padding: calc(env(safe-area-inset-top) + 24px) 16px calc(60px + 16px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 14px;
